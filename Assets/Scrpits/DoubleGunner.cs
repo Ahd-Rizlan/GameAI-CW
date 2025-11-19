@@ -6,30 +6,31 @@ using UnityEngine.AI;
 
 public class DoubleGunner : MonoBehaviour
 {
-    // Header
+    
+    [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
     [SerializeField] private Transform playerTransform;
     [SerializeField] private Transform firePoint1;
-    //[SerializeField] private Transform firePoint2;
+    [SerializeField] private Transform firePoint2;
     [SerializeField] private GameObject bulletPrefab;
 
-    //Layers
+    [Header("Layers")]
     [SerializeField] private LayerMask playerLayer;
     [SerializeField] private LayerMask groundLayer;
 
 
-    //Patrol Settings
+    [Header("Patrol Settings")]
     [SerializeField] private float patrolRadius = 10f;
     private Vector3 currentPatrolPoint;
     private bool hasPatrolPoint;
 
-    //Combat Settings
+    [Header("Attack Settings")]
     [SerializeField] private float attackCooldown = 1f;
+    [SerializeField]private float bulletSpeed = 20f;
     private bool isOnAttackCoolDown;
-    //[SerializeField] private float fowardShotForce = 10f;
-    //[SerializeField] private float verticleShotForce = 2f;
 
-    //Detection Ranges
+
+    [Header("Detection Settings")]
     [SerializeField] private float visionRange = 20f;
     [SerializeField] private float engagementRange = 15f;
 
@@ -130,13 +131,15 @@ public class DoubleGunner : MonoBehaviour
         }
 
     }
-    private void Fire() 
+    private void Fire()
     {
-        if (bulletPrefab == null || firePoint1 == null ) return;
-        
-            Rigidbody projectileRb1 = Instantiate(bulletPrefab, firePoint1.position, firePoint1.rotation).GetComponent<Rigidbody>();
-        projectileRb1.velocity = firePoint1.forward * 20f;
+        if (bulletPrefab == null || firePoint1 == null || firePoint2 == null) return;
 
+        Rigidbody projectileRb1 = Instantiate(bulletPrefab, firePoint1.position, firePoint1.rotation).GetComponent<Rigidbody>();
+        projectileRb1.velocity = firePoint1.forward * bulletSpeed;
+
+        Rigidbody projectileRb2 = Instantiate(bulletPrefab, firePoint2.position, firePoint2.rotation).GetComponent<Rigidbody>();
+        projectileRb2.velocity = firePoint2.forward * bulletSpeed;
 
 
     }
