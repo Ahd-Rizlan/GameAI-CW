@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using UnityEngine;
 using UnityEngine.AI;
+using TMPro;
 
 public class DoubleGunner : MonoBehaviour,IDamageable
 {
@@ -15,6 +16,12 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         Retreat
     }
     private TerrainScanner scanner;
+
+    [Header("Text Mesh")]
+    [SerializeField] private TMP_Text Name;
+    [SerializeField] private TMP_Text State;
+    [SerializeField] private TMP_Text HP;
+    
 
     [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
@@ -70,12 +77,18 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         navAgent = GetComponent<NavMeshAgent>();
         navAgent.SetDestination(PatrolPoints[nextPatrolPoint]);
         navAgent.speed = normalSpeed;
+        Name.text = "ID: "+"Double Gunner";
+        State.text ="STATE: " + currentState.ToString();
+        HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+        HP.color = Color.green;
     }
 
     void Update()
     {
         SwitchState();
-        HandleTerrainSpeed(); 
+        HandleTerrainSpeed();
+        State.text = "STATE: " + currentState.ToString();
+        
     }
 
 
@@ -110,6 +123,8 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         if (!isRetreating)
         {
             meshRenderer.material = RetreatMaterial;
+            State.color = RetreatMaterial.color;
+            HP.color = Color.red;
             navAgent.isStopped = false; // Make sure we can move
             Vector3 coverPos = FindCoverPosition();
             navAgent.SetDestination(coverPos);
@@ -139,6 +154,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     {
         navAgent.ResetPath();
         meshRenderer.material = AttackMaterial;
+        State.color = AttackMaterial.color;
         transform.LookAt(playerTransform);
 
         //shooting login
@@ -173,6 +189,8 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     private void Chase()
     {
         meshRenderer.material = ChaseMaterial;
+        State.color = ChaseMaterial.color;
+
         navAgent.SetDestination(playerTransform.position);
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
@@ -207,6 +225,8 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         if (!navAgent.hasPath || navAgent.velocity.sqrMagnitude == 0f)
         {
             meshRenderer.material = PatrolMaterial;
+            State.color = PatrolMaterial.color;
+
             nextPatrolPoint = (nextPatrolPoint + 1) % PatrolPoints.Length;
             navAgent.SetDestination((PatrolPoints[nextPatrolPoint]));
         }
@@ -256,7 +276,10 @@ public class DoubleGunner : MonoBehaviour,IDamageable
 
     public void TakeDamage(float damageAmount)
     {
+
         currentHealth -= damageAmount;
+        HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+
         if (currentHealth <= 0)
         {
             Destroy(gameObject,0.5f);
