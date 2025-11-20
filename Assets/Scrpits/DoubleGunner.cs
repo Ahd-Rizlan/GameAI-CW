@@ -149,6 +149,11 @@ public class DoubleGunner : MonoBehaviour,IDamageable
             Rigidbody rb_01 = bullet_01.GetComponent<Rigidbody>();
             rb_01.velocity = transform.forward * bullet_01.GetComponent<Bullet>().Speed;
 
+
+            GameObject bullet_02 = Instantiate(Bullet, Gun_02.position, Gun_02.rotation);
+            Rigidbody rb_02 = bullet_02.GetComponent<Rigidbody>();
+            rb_02.velocity = transform.forward * bullet_02.GetComponent<Bullet>().Speed;
+
         }
 
         //Transition back to chase
