@@ -1,13 +1,29 @@
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IDamageable
 {
-    public float speed = 5f;
-    public int health = 100;
-    public GameObject bulletPrefab;
-    public Transform bulletSpawn;
-    public float fireCooldown = 0.3f;
-    float nextFire = 0f;
+    [Header("References")]
+    [SerializeField] public GameObject bulletPrefab;
+    [SerializeField] public Transform bulletSpawn;
+
+
+    [Header("Health")]
+    [SerializeField] public float maxHealth = 100f;
+    [SerializeField] public float currentHealth;
+
+    [Header("Movement & Shooting")]
+    [SerializeField] public float speed = 5f;
+    [SerializeField] public float fireCooldown = 0.3f;
+    [SerializeField] float nextFire = 0f;
+
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
+
+
+    void Awake()
+    {
+        currentHealth = maxHealth;
+    }
     void Update()
     {
         Move();
@@ -40,19 +56,17 @@ public class Player : MonoBehaviour
 
 
 
-//public void TakeDamage(int damage)
-//    {
-//        health -= damage;
-//        if (health <= 0)
-//        {
-//            Die();
-//        }
-//    }
+    public void TakeDamage(float Damage)
+    {
+        currentHealth -= Damage;
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
 
-//    void Die()
-//    {
-//        // Handle player death (e.g., respawn, game over)
-//        Debug.Log("Player has died.");
-//        Destroy(gameObject);
-//    }
+    public void Die()
+    {
+        Destroy(gameObject,0.2f);
+    }
 }

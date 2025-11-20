@@ -398,11 +398,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52833d498e5e85747a137216942ce31b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 5
-  health: 100
   bulletPrefab: {fileID: 8307514592340099864, guid: 8253ac0b4fd77c64db5f4a051a39d742,
     type: 3}
   bulletSpawn: {fileID: 8423292732160265058}
+  maxHealth: 100
+  currentHealth: 0
+  speed: 5
+  fireCooldown: 0.3
+  nextFire: 0
 --- !u!195 &-4171578990866236355
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -422,6 +425,6 @@ NavMeshAgent:
   m_AutoBraking: 1
   m_AutoRepath: 1
   m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
+  m_BaseOffset: 0.5
+  m_WalkableMask: 1
   m_ObstacleAvoidanceType: 4

@@ -4,149 +4,177 @@ using System.Runtime.Remoting.Messaging;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class DoubleGunner : MonoBehaviour
+public class DoubleGunner : MonoBehaviour,IDamageable
 {
-    
+
+    public enum GunnerState
+    {
+        Patrol,
+        Chase,
+        Attack,
+        Retreat
+    }
+
     [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
+    [SerializeField] private MeshRenderer meshRenderer;
     [SerializeField] private Transform playerTransform;
-    [SerializeField] private Transform firePoint1;
-    [SerializeField] private Transform firePoint2;
-    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private Transform Gun_01;
+    [SerializeField] private Transform Gun_02;
+    [SerializeField] private GameObject Bullet;
 
-    [Header("Layers")]
-    [SerializeField] private LayerMask playerLayer;
-    [SerializeField] private LayerMask groundLayer;
+    [Header("Health")]
+    [SerializeField] private float maxHealth = 100;
+    [SerializeField] private float currentHealth;
+
 
 
     [Header("Patrol Settings")]
-    [SerializeField] private float patrolRadius = 10f;
-    private Vector3 currentPatrolPoint;
-    private bool hasPatrolPoint;
+    [SerializeField] Vector3[] PatrolPoints;  
+    int nextPatrolPoint = 0;
 
     [Header("Attack Settings")]
-    [SerializeField] private float attackCooldown = 1f;
-    [SerializeField]private float bulletSpeed = 20f;
-    private bool isOnAttackCoolDown;
+    [SerializeField] private float nextShootTime = 0;
+    [SerializeField]private float FireRate = 2f;
+
 
 
     [Header("Detection Settings")]
     [SerializeField] private float visionRange = 20f;
     [SerializeField] private float engagementRange = 15f;
+    [SerializeField] private float AttackRange = 10f;
+
+    [Header("Material")]
+    [SerializeField] private Material PatrolMaterial;
+    [SerializeField] private Material ChaseMaterial;
+    [SerializeField] private Material AttackMaterial;
+
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
+
+    GunnerState currentState = GunnerState.Patrol;
 
 
-    private bool isPlayerVisible;
-    private bool isPlayerInRange;    
-
-    // Start is called before the first frame update
-    void Awake()
+    void Start()
     {
-        
-        if (playerTransform == null)
-        {
-            playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
-        }
-
-        if (navAgent == null)
-        {
-            navAgent = GetComponent<NavMeshAgent>();
-        }
+        currentHealth = maxHealth;
+        navAgent = GetComponent<NavMeshAgent>();
+        navAgent.SetDestination(PatrolPoints[nextPatrolPoint]);
     }
 
-    // Update is called once per frame
     void Update()
     {
-        DetectPlayer();
-        UpdateBehaviourState();
-    }
-
-    private void UpdateBehaviourState()
-    {
-
-        if (!isPlayerVisible && !isPlayerInRange) 
-        {
-            Patroling();
-        }
-        else if (isPlayerVisible && !isPlayerInRange) 
-        {
-            PeformChase();
-        }
-        else if (isPlayerInRange && isPlayerVisible) 
-        {
-            PerformAttack();
-        }
+        SwitchState();
     }
 
 
-    private void Patroling() 
+    private void SwitchState()
     {
-        if (!hasPatrolPoint) 
+        switch (currentState)
         {
-            FindPatrolPoint();
-        }
-        if (hasPatrolPoint) 
-        {
-            navAgent.SetDestination(currentPatrolPoint);
-        }
-        //Reached the patrol point
-        if (Vector3.Distance(transform.position ,currentPatrolPoint) < 1f) 
-        {
-            hasPatrolPoint = false;
+            case GunnerState.Patrol:
+                Patrol();
+                break;
+            case GunnerState.Chase:
+                Chase();
+                break;
+            case GunnerState.Attack:
+                Attack();
+                break;
+            case GunnerState.Retreat:
+                //Retreat();
+                break;
+            default:
+                Patrol();
+                break;
         }
     }
-    private void PeformChase() 
+
+
+
+
+    private void Attack()
     {
-        if (playerTransform != null)
-        {
-            navAgent.SetDestination(playerTransform.position);
-        }
-    }
-    private void PerformAttack()  
-    {
-        navAgent.SetDestination(transform.position);
+        navAgent.ResetPath();
+        meshRenderer.material = AttackMaterial;
         transform.LookAt(playerTransform);
-        if (!isOnAttackCoolDown) 
+
+        //shooting login
+        if (Time.time > nextShootTime)
         {
-            Fire();
-            StartCoroutine(AttackCooldownRoutine());
+            nextShootTime = Time.time + FireRate;
+            GameObject bullet_01 = Instantiate(Bullet, Gun_01.position, Gun_01.rotation);
+            Rigidbody rb_01 = bullet_01.GetComponent<Rigidbody>();
+            rb_01.velocity = transform.forward * bullet_01.GetComponent<Bullet>().Speed;
+
         }
-    }
-    private IEnumerator AttackCooldownRoutine()
-    {
-        isOnAttackCoolDown = true;
-        yield return new WaitForSeconds(attackCooldown);
-        isOnAttackCoolDown = false;
-    }
-    private void FindPatrolPoint() 
-    {
-        float randomX = Random.Range(-patrolRadius, patrolRadius);
-        float randomY = Random.Range(-patrolRadius, patrolRadius);
 
-        Vector3 potentialPoint  = new Vector3(transform.position.x + randomX, transform.position.y, transform.position.z + randomY);
-
-        if (Physics.Raycast(potentialPoint, -transform.up, 2f, groundLayer)) 
+        //Transition back to chase
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+        if (distanceToPlayer > AttackRange)
         {
-            currentPatrolPoint = potentialPoint;
-            hasPatrolPoint = true;
+            currentState = GunnerState.Chase;
+
+        }
+        if (currentHealth < maxHealth * 0.3f)
+        {
+            currentState = GunnerState.Patrol;
         }
 
     }
-    private void Fire()
+
+    private void Chase()
     {
-        if (bulletPrefab == null || firePoint1 == null || firePoint2 == null) return;
+        meshRenderer.material = ChaseMaterial;
+        navAgent.SetDestination(playerTransform.position);
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
-        Rigidbody projectileRb1 = Instantiate(bulletPrefab, firePoint1.position, firePoint1.rotation).GetComponent<Rigidbody>();
-        projectileRb1.velocity = firePoint1.forward * bulletSpeed;
+        //Transation to Attach Close enough
+        if (distanceToPlayer <= AttackRange)
+        {
+            currentState = GunnerState.Attack;
+            return;
+        }
+        //Transation toif Player gets away
+        if (distanceToPlayer > engagementRange)
+        {
+            currentState = GunnerState.Patrol;
+            navAgent.ResetPath();
+            return;
 
-        Rigidbody projectileRb2 = Instantiate(bulletPrefab, firePoint2.position, firePoint2.rotation).GetComponent<Rigidbody>();
-        projectileRb2.velocity = firePoint2.forward * bulletSpeed;
-
+        }
 
     }
-    private void DetectPlayer()
+
+
+    private void Patrol()
     {
-        isPlayerInRange = Physics.CheckSphere(transform.position, engagementRange, playerLayer);
-        isPlayerVisible = Physics.CheckSphere(transform.position, visionRange, playerLayer);
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+
+        if (distanceToPlayer <= engagementRange)
+        {
+            currentState = GunnerState.Chase;
+            return;
+        }
+        
+        if (!navAgent.hasPath || navAgent.velocity.sqrMagnitude == 0f)
+        {
+            meshRenderer.material = PatrolMaterial;
+            nextPatrolPoint = (nextPatrolPoint + 1) % PatrolPoints.Length;
+            navAgent.SetDestination((PatrolPoints[nextPatrolPoint]));
+        }
+    }
+
+
+
+
+    public void TakeDamage(float damageAmount)
+    {
+        currentHealth -= damageAmount;
+        if (currentHealth <= 0)
+        {
+            Destroy(gameObject,0.5f);
+        }
     }
 
     private void OnDrawGizmosSelected()
@@ -157,7 +185,11 @@ public class DoubleGunner : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRange);
     }
-     
 
+    public void Die()
+    {
+        // Enemy death logic
+        Destroy(gameObject, 0.2f);
+    }
 
 }

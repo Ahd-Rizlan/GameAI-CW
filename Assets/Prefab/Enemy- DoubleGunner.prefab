@@ -292,7 +292,7 @@ NavMeshAgent:
   m_GameObject: {fileID: 3241154927606557213}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.5
+  m_Radius: 1
   m_Speed: 3.5
   m_Acceleration: 8
   avoidancePriority: 50
@@ -318,20 +318,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   navAgent: {fileID: -2103300311322748713}
+  meshRenderer: {fileID: 0}
   playerTransform: {fileID: 0}
-  firePoint1: {fileID: 0}
-  bulletPrefab: {fileID: 0}
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  patrolRadius: 10
-  attackCooldown: 1
-  bulletSpeed: 20
+  Gun_01: {fileID: 0}
+  Gun_02: {fileID: 0}
+  Bullet: {fileID: 0}
+  maxHealth: 100
+  currentHealth: 0
+  PatrolPoints: []
+  nextShootTime: 0
+  FireRate: 2
   visionRange: 20
   engagementRange: 15
+  AttackRange: 10
+  PatrolMaterial: {fileID: 0}
+  ChaseMaterial: {fileID: 0}
+  AttackMaterial: {fileID: 0}
 --- !u!1 &3400704191954996534
 GameObject:
   m_ObjectHideFlags: 0
