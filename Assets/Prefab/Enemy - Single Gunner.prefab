@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3385275389810228286}
   - component: {fileID: 6718333057517061757}
   - component: {fileID: 7620931328824893152}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Gun
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -120,7 +120,7 @@ GameObject:
   - component: {fileID: 1892953872028716686}
   - component: {fileID: 7599833047722320824}
   - component: {fileID: 2002096579236610418}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Face
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -225,7 +225,7 @@ GameObject:
   - component: {fileID: 2993268448648674679}
   - component: {fileID: 8726666822358778390}
   - component: {fileID: 5430744944615751897}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -358,7 +358,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6196099022866628183}
   - component: {fileID: 420851636221503155}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Enemy - Single Gunner
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -418,7 +418,7 @@ GameObject:
   - component: {fileID: 426907399046792735}
   - component: {fileID: 2354167073134094426}
   - component: {fileID: 641806731209298862}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -517,7 +517,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6135703661841417826}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bullet Generator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -551,7 +551,7 @@ GameObject:
   - component: {fileID: 2093337383363294143}
   - component: {fileID: 1456419224544525212}
   - component: {fileID: 1028110068613687573}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}

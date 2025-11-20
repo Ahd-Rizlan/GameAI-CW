@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1072610937616834486}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bullet Generator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -43,7 +43,7 @@ GameObject:
   - component: {fileID: 7549297319091786373}
   - component: {fileID: 4698896408370219770}
   - component: {fileID: 8224719773292082613}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -145,7 +145,7 @@ GameObject:
   - component: {fileID: 8616314352650173050}
   - component: {fileID: 6359993954857715478}
   - component: {fileID: 5292220526017994297}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Gun (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -253,7 +253,7 @@ GameObject:
   - component: {fileID: 3199348188719908475}
   - component: {fileID: 1624534340729373069}
   - component: {fileID: 3355214888788694749}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Face
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -358,7 +358,7 @@ GameObject:
   - component: {fileID: 5759259350360239509}
   - component: {fileID: -2103300311322748713}
   - component: {fileID: -5702685645572869732}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Enemy- DoubleGunner
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -453,7 +453,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2876061021779911696}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bullet Generator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -487,7 +487,7 @@ GameObject:
   - component: {fileID: 7746312959595714021}
   - component: {fileID: 5513057634937244192}
   - component: {fileID: 5488978100828895965}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Crown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -593,7 +593,7 @@ GameObject:
   - component: {fileID: 1486721625522791245}
   - component: {fileID: 8185501699423531793}
   - component: {fileID: 6192200732787223353}
-  m_Layer: 5
+  m_Layer: 3
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -728,7 +728,7 @@ GameObject:
   - component: {fileID: 2398860485431222692}
   - component: {fileID: 8555781059118627056}
   - component: {fileID: 488743673514477812}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Gun
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -836,7 +836,7 @@ GameObject:
   - component: {fileID: 7116953038717408541}
   - component: {fileID: 1900177619871819693}
   - component: {fileID: 857528041229548265}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
