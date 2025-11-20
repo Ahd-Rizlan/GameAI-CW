@@ -14,6 +14,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         Attack,
         Retreat
     }
+    private TerrainScanner scanner;
 
     [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
@@ -37,7 +38,8 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     [SerializeField] private float nextShootTime = 0;
     [SerializeField]private float FireRate = 2f;
 
-
+    [Header("Movement")]
+    [SerializeField] private float normalSpeed = 3.5f;
 
     [Header("Detection Settings")]
     [SerializeField] private float visionRange = 20f;
@@ -64,13 +66,16 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     void Start()
     {
         currentHealth = maxHealth;
+        scanner = GetComponent<TerrainScanner>();
         navAgent = GetComponent<NavMeshAgent>();
         navAgent.SetDestination(PatrolPoints[nextPatrolPoint]);
+        navAgent.speed = normalSpeed;
     }
 
     void Update()
     {
         SwitchState();
+        HandleTerrainSpeed(); 
     }
 
 
@@ -266,6 +271,18 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     {
         // Enemy death logic
         Destroy(gameObject, 0.2f);
+    }
+
+    private void HandleTerrainSpeed()
+    {
+        float speedMultiplier = 1f;
+        if (scanner != null)
+        {
+            speedMultiplier = scanner.GetSpeedMultiplier();
+        }
+
+        float targetSpeed = normalSpeed * speedMultiplier;
+        navAgent.speed = Mathf.Lerp(navAgent.speed, targetSpeed, Time.deltaTime * 5f);
     }
 
 }

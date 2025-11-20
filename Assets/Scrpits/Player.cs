@@ -16,12 +16,14 @@ public class Player : MonoBehaviour, IDamageable
     [SerializeField] public float fireCooldown = 0.3f;
     [SerializeField] float nextFire = 0f;
 
+    private TerrainScanner scanner;
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
 
 
     void Awake()
     {
+        scanner = GetComponent<TerrainScanner>();
         currentHealth = maxHealth;
     }
     void Update()
@@ -36,10 +38,13 @@ public class Player : MonoBehaviour, IDamageable
 
     void Move()
     {
+        float speedMultiplier = 1f;
+        if (scanner != null) speedMultiplier = scanner.GetSpeedMultiplier();
+
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
         Vector3 direction = new Vector3(h, 0, v).normalized;
-        transform.Translate(direction * speed * Time.deltaTime, Space.World);
+        transform.Translate(direction * (speedMultiplier * speed) * Time.deltaTime, Space.World);
         if (direction != Vector3.zero) transform.forward = direction; 
     }
 
