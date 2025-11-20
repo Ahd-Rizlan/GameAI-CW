@@ -34,6 +34,12 @@ public class DoubleGunner : MonoBehaviour
     [SerializeField] private float visionRange = 20f;
     [SerializeField] private float engagementRange = 15f;
 
+    [Header("Materials")]
+    [SerializeField] Material PatrolMaterial;  
+    [SerializeField] Material ChaseMaterial; 
+    [SerializeField] Material AttackMaterial; 
+    [SerializeField] Material RetreatMaterial;
+
 
     private bool isPlayerVisible;
     private bool isPlayerInRange;    
@@ -78,20 +84,24 @@ public class DoubleGunner : MonoBehaviour
     }
 
 
-    private void Patroling() 
+    private void Patroling()
     {
-        if (!hasPatrolPoint) 
+        if (!hasPatrolPoint)
         {
             FindPatrolPoint();
         }
-        if (hasPatrolPoint) 
+
+        if (hasPatrolPoint)
         {
             navAgent.SetDestination(currentPatrolPoint);
-        }
-        //Reached the patrol point
-        if (Vector3.Distance(transform.position ,currentPatrolPoint) < 1f) 
-        {
-            hasPatrolPoint = false;
+
+            // FIX FOR "STAYING IN SAME PLACE":
+            // We check if we are CLOSE enough, not exact.
+            // We also check !navAgent.pathPending to make sure it finished calculating.
+            if (!navAgent.pathPending && navAgent.remainingDistance <= navAgent.stoppingDistance)
+            {
+                hasPatrolPoint = false;
+            }
         }
     }
     private void PeformChase() 
@@ -117,19 +127,26 @@ public class DoubleGunner : MonoBehaviour
         yield return new WaitForSeconds(attackCooldown);
         isOnAttackCoolDown = false;
     }
-    private void FindPatrolPoint() 
+    private void FindPatrolPoint()
     {
-        float randomX = Random.Range(-patrolRadius, patrolRadius);
-        float randomY = Random.Range(-patrolRadius, patrolRadius);
-
-        Vector3 potentialPoint  = new Vector3(transform.position.x + randomX, transform.position.y, transform.position.z + randomY);
-
-        if (Physics.Raycast(potentialPoint, -transform.up, 2f, groundLayer)) 
+        for (int i = 0; i < 30; i++) // Try 30 times to find a point
         {
-            currentPatrolPoint = potentialPoint;
-            hasPatrolPoint = true;
+            // 1. Pick a random point in a sphere
+            Vector3 randomPoint = transform.position + Random.insideUnitSphere * patrolRadius;
+
+            // 2. Ask NavMesh: "Is there a walkable floor near this random point?"
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomPoint, out hit, 1.0f, NavMesh.AllAreas))
+            {
+                // 3. We found a valid spot on the NavMesh!
+                currentPatrolPoint = hit.position;
+                hasPatrolPoint = true;
+                return; // Success, exit the function
+            }
         }
 
+        // If we tried 30 times and failed (rare), wait until next frame
+        hasPatrolPoint = false;
     }
     private void Fire()
     {

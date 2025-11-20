@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2426854117806628125}
   - component: {fileID: 3297004068686002290}
   - component: {fileID: 4557457003359900208}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -117,7 +117,7 @@ GameObject:
   - component: {fileID: 3957051160974268045}
   - component: {fileID: 1888308851911296950}
   - component: {fileID: 918749096842374404}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Face
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -220,7 +220,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8423292732160265058}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Bullet Generator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -254,7 +254,7 @@ GameObject:
   - component: {fileID: 3227069649773057748}
   - component: {fileID: 2222685222216962370}
   - component: {fileID: 556110336077416755}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Gun
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -361,7 +361,7 @@ GameObject:
   - component: {fileID: 3297872260368106890}
   - component: {fileID: 2799179727895197677}
   - component: {fileID: -4171578990866236355}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -403,6 +403,7 @@ MonoBehaviour:
   bulletPrefab: {fileID: 8307514592340099864, guid: 8253ac0b4fd77c64db5f4a051a39d742,
     type: 3}
   bulletSpawn: {fileID: 8423292732160265058}
+  fireCooldown: 0.3
 --- !u!195 &-4171578990866236355
 NavMeshAgent:
   m_ObjectHideFlags: 0

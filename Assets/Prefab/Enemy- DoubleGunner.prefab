@@ -319,7 +319,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   navAgent: {fileID: -2103300311322748713}
   playerTransform: {fileID: 0}
-  firePoint1: {fileID: 0}
+  firePoint1: {fileID: 1072610937616834486}
+  firePoint2: {fileID: 2876061021779911696}
   bulletPrefab: {fileID: 0}
   playerLayer:
     serializedVersion: 2
@@ -332,6 +333,10 @@ MonoBehaviour:
   bulletSpeed: 20
   visionRange: 20
   engagementRange: 15
+  PatrolMaterial: {fileID: 0}
+  ChaseMaterial: {fileID: 0}
+  AttackMaterial: {fileID: 0}
+  RetreatMaterial: {fileID: 0}
 --- !u!1 &3400704191954996534
 GameObject:
   m_ObjectHideFlags: 0
