@@ -5,7 +5,7 @@ using UnityEngine;
 public class Bullet : MonoBehaviour
 {
     public float Speed = 10f;
-    public float damage;
+    public float damage= 20f;
     public Player player;
     public DoubleGunner doubleGunner;
 
@@ -13,7 +13,7 @@ public class Bullet : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        IDamageable target = collision.collider.GetComponent<IDamageable>();
+        IDamageable target = collision.collider.GetComponentInParent<IDamageable>();
         if (target != null)
         {
             target.TakeDamage(damage);

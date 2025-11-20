@@ -48,6 +48,12 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     [SerializeField] private Material PatrolMaterial;
     [SerializeField] private Material ChaseMaterial;
     [SerializeField] private Material AttackMaterial;
+    [SerializeField] private Material RetreatMaterial;
+
+    [Header("Cover Settings")]
+    [SerializeField] private LayerMask wallLayer; 
+    [SerializeField] private float retreatDistance = 10f;
+    [SerializeField] private bool isRetreating = false;
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
@@ -82,8 +88,9 @@ public class DoubleGunner : MonoBehaviour,IDamageable
                 Attack();
                 break;
             case GunnerState.Retreat:
-                //Retreat();
+                Retreat();
                 break;
+            
             default:
                 Patrol();
                 break;
@@ -91,7 +98,37 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     }
 
 
+    private void Retreat()
+    {
+        
+        // 1. Find a spot if we haven't already
+        if (!isRetreating)
+        {
+            meshRenderer.material = RetreatMaterial;
+            navAgent.isStopped = false; // Make sure we can move
+            Vector3 coverPos = FindCoverPosition();
+            navAgent.SetDestination(coverPos);
+            isRetreating = true;
+        }
 
+        // 2. Once we arrive at the cover spot
+        if (!navAgent.pathPending && navAgent.remainingDistance < 0.5f)
+        {
+            // Turn to face the player (defensive stance)
+            transform.LookAt(playerTransform);
+
+            // Heal over time
+            currentHealth += Time.deltaTime * 10f; // Heal 10 HP per second
+
+            // 3. Transition: If healed to 50%, go back to Patrol
+            if (currentHealth >= maxHealth * 0.5f)
+            {
+                currentHealth = maxHealth * 0.5f; // Cap it
+                isRetreating = false; // Reset for next time
+                currentState = GunnerState.Patrol;
+            }
+        }
+    }
 
     private void Attack()
     {
@@ -118,7 +155,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         }
         if (currentHealth < maxHealth * 0.3f)
         {
-            currentState = GunnerState.Patrol;
+            currentState = GunnerState.Retreat;
         }
 
     }
@@ -165,6 +202,45 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         }
     }
 
+
+    private Vector3 FindCoverPosition()
+    {
+        // Try 5 times to find a spot hidden behind a wall
+        for (int i = 0; i < 5; i++)
+        {
+            // Pick a random spot nearby
+            Vector3 randomPoint = transform.position + Random.insideUnitSphere * retreatDistance;
+            NavMeshHit hit;
+
+            // Check if that spot is valid on the NavMesh
+            if (NavMesh.SamplePosition(randomPoint, out hit, 2f, NavMesh.AllAreas))
+            {
+                Vector3 possibleCoverSpot = hit.position;
+
+                // Raycast Check: Can the player see this spot?
+                Vector3 directionToPlayer = (playerTransform.position - possibleCoverSpot).normalized;
+                float distanceToPlayer = Vector3.Distance(possibleCoverSpot, playerTransform.position);
+
+                // If the ray hits a "Wall" (obstacleMask) before hitting the player, it is safe.
+                if (Physics.Raycast(possibleCoverSpot, directionToPlayer, distanceToPlayer, wallLayer))
+                {
+                    return possibleCoverSpot; // Found a hidden spot!
+                }
+            }
+        }
+
+        // Fallback: If no walls found, just run directly away from the player
+        Vector3 runAwayDirection = (transform.position - playerTransform.position).normalized;
+        Vector3 runAwayPos = transform.position + runAwayDirection * retreatDistance;
+
+        NavMeshHit finalHit;
+        if (NavMesh.SamplePosition(runAwayPos, out finalHit, 2f, NavMesh.AllAreas))
+        {
+            return finalHit.position;
+        }
+
+        return transform.position; // Stay put if trapped
+    }
 
 
 
