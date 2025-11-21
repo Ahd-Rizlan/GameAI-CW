@@ -20,6 +20,15 @@ public class Player : MonoBehaviour, IDamageable
     [Header("UI Elements")]
     [SerializeField] public TMP_Text HP;
 
+    [Header("Defense Stats")]
+    [SerializeField] private float dodgeChance = 0.2f;
+
+    [Header("References")]
+    [SerializeField] private MeshRenderer meshRenderer;
+
+    [Header("Material")]
+    [SerializeField] private Material DodgeMaterial;
+
     private TerrainScanner scanner;
 
 
@@ -77,6 +86,13 @@ public class Player : MonoBehaviour, IDamageable
 
     public void TakeDamage(float Damage)
     {
+        float roll = Random.value;
+        if (roll < dodgeChance)
+        {
+            if (meshRenderer) meshRenderer.material = DodgeMaterial;
+            return; 
+        }
+
         currentHealth -= Damage;
         if (currentHealth <= 0)
         {

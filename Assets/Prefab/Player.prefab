@@ -647,6 +647,9 @@ MonoBehaviour:
   fireCooldown: 0.3
   nextFire: 0
   HP: {fileID: 1484828804796354528}
+  dodgeChance: 0.2
+  meshRenderer: {fileID: 3297004068686002290}
+  DodgeMaterial: {fileID: 2100000, guid: ebc44ff516c3f384597a3e85af647f3c, type: 2}
 --- !u!195 &-4171578990866236355
 NavMeshAgent:
   m_ObjectHideFlags: 0
