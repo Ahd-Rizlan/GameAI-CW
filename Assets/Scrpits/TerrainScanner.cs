@@ -24,6 +24,7 @@ public class TerrainScanner : MonoBehaviour
         // 1. Shoot ONE ray down to see what we are standing on
         if (Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, out hit, rayLength))
         {
+            Debug.Log("I am standing on: " + hit.collider.name + " (Layer: " + LayerMask.LayerToName(hit.collider.gameObject.layer) + ")");
             // 2. Check the object we hit against our list of Terrain Types
             foreach (TerrainType terrain in terrainTypes)
             {

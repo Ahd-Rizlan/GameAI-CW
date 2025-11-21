@@ -361,6 +361,7 @@ GameObject:
   - component: {fileID: 3297872260368106890}
   - component: {fileID: 2799179727895197677}
   - component: {fileID: -4171578990866236355}
+  - component: {fileID: 6406144450097700642}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -425,6 +426,30 @@ NavMeshAgent:
   m_AutoBraking: 1
   m_AutoRepath: 1
   m_Height: 2
-  m_BaseOffset: 0.5
-  m_WalkableMask: 1
+  m_BaseOffset: 0.6
+  m_WalkableMask: 25
   m_ObstacleAvoidanceType: 4
+--- !u!114 &6406144450097700642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7415947786894932450}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c97b96bff58dc8b4e85ba912ec850a6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rayLength: 2
+  terrainTypes:
+  - name: Mud
+    layer:
+      serializedVersion: 2
+      m_Bits: 512
+    speedMultiplier: 0.5
+  - name: Water
+    layer:
+      serializedVersion: 2
+      m_Bits: 16
+    speedMultiplier: 0.3
