@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 public class Player : MonoBehaviour, IDamageable
@@ -15,16 +16,19 @@ public class Player : MonoBehaviour, IDamageable
     [SerializeField] public float speed = 5f;
     [SerializeField] public float fireCooldown = 0.3f;
     [SerializeField] float nextFire = 0f;
+    
+    [Header("UI Elements")]
+    [SerializeField] public TMP_Text HP;
 
     private TerrainScanner scanner;
-    public float CurrentHealth => currentHealth;
-    public float MaxHealth => maxHealth;
 
 
     void Awake()
     {
+        
         scanner = GetComponent<TerrainScanner>();
         currentHealth = maxHealth;
+        UpdateUI();
     }
     void Update()
     {
@@ -46,6 +50,16 @@ public class Player : MonoBehaviour, IDamageable
         Vector3 direction = new Vector3(h, 0, v).normalized;
         transform.Translate(direction * (speedMultiplier * speed) * Time.deltaTime, Space.World);
         if (direction != Vector3.zero) transform.forward = direction; 
+
+        if(currentHealth <= maxHealth)
+        {
+            currentHealth += 5f * Time.deltaTime;
+            HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+        }
+        if(currentHealth <= maxHealth*0.3f)
+        {
+            HP.color = Color.red;
+        }
     }
 
     void Shoot()
@@ -74,4 +88,23 @@ public class Player : MonoBehaviour, IDamageable
     {
         Destroy(gameObject,0.2f);
     }
+
+    void UpdateUI()
+    {
+        if (HP != null)
+        {
+            
+            HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+            HP.color = Color.green;
+
+
+            // Billboard effect
+            if (Camera.main != null)
+            {
+                HP.transform.rotation = Camera.main.transform.rotation;
+            }
+        }
+    }
+   
+
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using TMPro;
 
-public class DoubleGunner : MonoBehaviour,IDamageable
+public class DoubleGunner : MonoBehaviour, IDamageable
 {
     private static int GlobalGunnerCount = 0;
     private int myID;
@@ -22,7 +22,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     [SerializeField] private TMP_Text Name;
     [SerializeField] private TMP_Text State;
     [SerializeField] private TMP_Text HP;
-    
+
 
     [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
@@ -39,12 +39,16 @@ public class DoubleGunner : MonoBehaviour,IDamageable
 
 
     [Header("Patrol Settings")]
-    [SerializeField] Vector3[] PatrolPoints;  
+    [SerializeField] Vector3[] PatrolPoints;
     int nextPatrolPoint = 0;
 
     [Header("Attack Settings")]
     [SerializeField] private float nextShootTime = 0;
-    [SerializeField]private float FireRate = 2f;
+    [SerializeField] private float FireRate = 2f;
+    [SerializeField] private float bulletSpeed = 7f;
+    [SerializeField] private float bullet_Min_Damage = 5f;
+    [SerializeField] private float bullet_Max_Damage = 10f;
+
 
     [Header("Movement")]
     [SerializeField] private float normalSpeed = 3.5f;
@@ -61,41 +65,39 @@ public class DoubleGunner : MonoBehaviour,IDamageable
     [SerializeField] private Material RetreatMaterial;
 
     [Header("Cover Settings")]
-    [SerializeField] private LayerMask wallLayer; 
+    [SerializeField] private LayerMask wallLayer;
     [SerializeField] private float retreatDistance = 10f;
     [SerializeField] private bool isRetreating = false;
 
-    public float CurrentHealth => currentHealth;
-    public float MaxHealth => maxHealth;
+
 
     GunnerState currentState = GunnerState.Patrol;
 
 
     void Start()
     {
-        currentHealth = maxHealth;
+        
         scanner = GetComponent<TerrainScanner>();
         navAgent = GetComponent<NavMeshAgent>();
         navAgent.SetDestination(PatrolPoints[nextPatrolPoint]);
         navAgent.speed = normalSpeed;
-        Name.text = "ID: " + myID.ToString("D2");
-        State.text ="STATE: " + currentState.ToString();
-        HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
-        HP.color = Color.green;
+        
     }
 
     void Update()
     {
         SwitchState();
         HandleTerrainSpeed();
-        State.text = "STATE: " + currentState.ToString();
-        
+        UpdateUI();
+
     }
 
-    void Awake() 
+    void Awake()
     {
         GlobalGunnerCount++;
         myID = GlobalGunnerCount;
+        currentHealth = maxHealth;
+        UpdateUI();
     }
     private void SwitchState()
     {
@@ -113,7 +115,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
             case GunnerState.Retreat:
                 Retreat();
                 break;
-            
+
             default:
                 Patrol();
                 break;
@@ -123,7 +125,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
 
     private void Retreat()
     {
-        
+
         // 1. Find a spot if we haven't already
         if (!isRetreating)
         {
@@ -144,11 +146,12 @@ public class DoubleGunner : MonoBehaviour,IDamageable
 
             // Heal over time
             currentHealth += Time.deltaTime * 10f; // Heal 10 HP per second
-
+            HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
             // 3. Transition: If healed to 50%, go back to Patrol
             if (currentHealth >= maxHealth * 0.5f)
             {
-                currentHealth = maxHealth * 0.5f; // Cap it
+                currentHealth = maxHealth * 0.5f; 
+                HP.color = Color.green;
                 isRetreating = false; // Reset for next time
                 currentState = GunnerState.Patrol;
             }
@@ -166,14 +169,8 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         if (Time.time > nextShootTime)
         {
             nextShootTime = Time.time + FireRate;
-            GameObject bullet_01 = Instantiate(Bullet, Gun_01.position, Gun_01.rotation);
-            Rigidbody rb_01 = bullet_01.GetComponent<Rigidbody>();
-            rb_01.velocity = transform.forward * bullet_01.GetComponent<Bullet>().Speed;
-
-
-            GameObject bullet_02 = Instantiate(Bullet, Gun_02.position, Gun_02.rotation);
-            Rigidbody rb_02 = bullet_02.GetComponent<Rigidbody>();
-            rb_02.velocity = transform.forward * bullet_02.GetComponent<Bullet>().Speed;
+            FireOneBullet(Gun_01);
+            FireOneBullet(Gun_02);
 
         }
 
@@ -226,7 +223,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
             currentState = GunnerState.Chase;
             return;
         }
-        
+
         if (!navAgent.hasPath || navAgent.velocity.sqrMagnitude == 0f)
         {
             meshRenderer.material = PatrolMaterial;
@@ -287,7 +284,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
 
         if (currentHealth <= 0)
         {
-            Destroy(gameObject,0.5f);
+            Destroy(gameObject, 0.5f);
         }
     }
 
@@ -318,4 +315,45 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         navAgent.speed = Mathf.Lerp(navAgent.speed, targetSpeed, Time.deltaTime * 5f);
     }
 
+
+    void UpdateUI()
+    {
+        if (Name && State && HP != null)
+        {
+            Name.text = "ID: " + myID.ToString("D2");
+            State.text = "STATE: " + currentState.ToString();
+            HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+            HP.color = Color.green;
+            
+
+            // Billboard effect
+            if (Camera.main != null)
+            {
+                Name.transform.rotation = Camera.main.transform.rotation;
+                State.transform.rotation = Camera.main.transform.rotation;
+                HP.transform.rotation = Camera.main.transform.rotation;
+            }
+        }
+    }
+
+    void FireOneBullet(Transform spawnPoint)
+    {
+        if (spawnPoint == null) return; 
+
+        GameObject b = Instantiate(Bullet, spawnPoint.position, spawnPoint.rotation);
+        Bullet script = b.GetComponent<Bullet>();
+
+
+        if (script != null)
+        {
+            script.minDamage = bullet_Min_Damage; 
+            script.maxDamage = bullet_Max_Damage;
+            script.Speed = bulletSpeed;     
+            script.owner = this.gameObject;
+        }
+
+        // --- PHYSICS ---
+        Rigidbody rb = b.GetComponent<Rigidbody>();
+        if (rb) rb.velocity = spawnPoint.forward * (script ? script.Speed : 10f);
+    }
 }
