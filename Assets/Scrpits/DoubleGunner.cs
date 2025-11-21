@@ -7,7 +7,8 @@ using TMPro;
 
 public class DoubleGunner : MonoBehaviour,IDamageable
 {
-
+    private static int GlobalGunnerCount = 0;
+    private int myID;
     public enum GunnerState
     {
         Patrol,
@@ -77,7 +78,7 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         navAgent = GetComponent<NavMeshAgent>();
         navAgent.SetDestination(PatrolPoints[nextPatrolPoint]);
         navAgent.speed = normalSpeed;
-        Name.text = "ID: "+"Double Gunner";
+        Name.text = "ID: " + myID.ToString("D2");
         State.text ="STATE: " + currentState.ToString();
         HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
         HP.color = Color.green;
@@ -91,7 +92,11 @@ public class DoubleGunner : MonoBehaviour,IDamageable
         
     }
 
-
+    void Awake() 
+    {
+        GlobalGunnerCount++;
+        myID = GlobalGunnerCount;
+    }
     private void SwitchState()
     {
         switch (currentState)
