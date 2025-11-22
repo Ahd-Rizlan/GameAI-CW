@@ -408,12 +408,10 @@ MonoBehaviour:
       serializedVersion: 2
       m_Bits: 16
     terrainPenalty: 2
-    regionColor: {r: 0, g: 0, b: 0, a: 0}
   - terrainMask:
       serializedVersion: 2
       m_Bits: 512
     terrainPenalty: 3
-    regionColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!1001 &326357083
 PrefabInstance:
   m_ObjectHideFlags: 0
