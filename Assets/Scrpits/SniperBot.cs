@@ -325,7 +325,7 @@ public class SniperBot : MonoBehaviour, IDamageable
         {
             currentState = SniperState.Reposition;
             StopMoving();
-            // The Update loop will pick this up and call Reposition() next frame
+            // The UpdateTerrainChunk loop will pick this up and call Reposition() next frame
         }
 
         if (currentHealth <= 0)
