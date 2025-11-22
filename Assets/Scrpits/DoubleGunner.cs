@@ -3,147 +3,289 @@ using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using UnityEngine;
 using UnityEngine.AI;
+using TMPro;
 
-public class DoubleGunner : MonoBehaviour
+public class DoubleGunner : MonoBehaviour, IDamageable
 {
-    // Header
+    private static int GlobalGunnerCount = 0;
+    private int myID;
+    public enum GunnerState
+    {
+        Patrol,
+        Chase,
+        Attack,
+        Retreat
+    }
+    private TerrainScanner scanner;
+
+    [Header("Text Mesh")]
+    [SerializeField] private TMP_Text Name;
+    [SerializeField] private TMP_Text State;
+    [SerializeField] private TMP_Text HP;
+
+
+    [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
+    [SerializeField] private MeshRenderer meshRenderer;
     [SerializeField] private Transform playerTransform;
-    [SerializeField] private Transform firePoint1;
-    //[SerializeField] private Transform firePoint2;
-    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private Transform Gun_01;
+    [SerializeField] private Transform Gun_02;
+    [SerializeField] private GameObject Bullet;
 
-    //Layers
-    [SerializeField] private LayerMask playerLayer;
-    [SerializeField] private LayerMask groundLayer;
+    [Header("Health")]
+    [SerializeField] private float maxHealth = 100;
+    [SerializeField] private float currentHealth;
 
 
-    //Patrol Settings
-    [SerializeField] private float patrolRadius = 10f;
-    private Vector3 currentPatrolPoint;
-    private bool hasPatrolPoint;
 
-    //Combat Settings
-    [SerializeField] private float attackCooldown = 1f;
-    private bool isOnAttackCoolDown;
-    //[SerializeField] private float fowardShotForce = 10f;
-    //[SerializeField] private float verticleShotForce = 2f;
+    [Header("Patrol Settings")]
+    [SerializeField] Vector3[] PatrolPoints;
+    int nextPatrolPoint = 0;
 
-    //Detection Ranges
+    [Header("Attack Settings")]
+    [SerializeField] private float nextShootTime = 0;
+    [SerializeField] private float FireRate = 2f;
+    [SerializeField] private float bulletSpeed = 7f;
+    [SerializeField] private float bullet_Min_Damage = 5f;
+    [SerializeField] private float bullet_Max_Damage = 10f;
+
+
+    [Header("Movement")]
+    [SerializeField] private float normalSpeed = 3.5f;
+
+    [Header("Detection Settings")]
     [SerializeField] private float visionRange = 20f;
     [SerializeField] private float engagementRange = 15f;
+    [SerializeField] private float AttackRange = 10f;
+
+    [Header("Material")]
+    [SerializeField] private Material PatrolMaterial;
+    [SerializeField] private Material ChaseMaterial;
+    [SerializeField] private Material AttackMaterial;
+    [SerializeField] private Material RetreatMaterial;
+
+    [Header("Cover Settings")]
+    [SerializeField] private LayerMask wallLayer;
+    [SerializeField] private float retreatDistance = 10f;
+    [SerializeField] private bool isRetreating = false;
 
 
-    private bool isPlayerVisible;
-    private bool isPlayerInRange;    
 
-    // Start is called before the first frame update
-    void Awake()
+    GunnerState currentState = GunnerState.Patrol;
+
+
+    void Start()
     {
         
-        if (playerTransform == null)
-        {
-            playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
-        }
-
-        if (navAgent == null)
-        {
-            navAgent = GetComponent<NavMeshAgent>();
-        }
+        scanner = GetComponent<TerrainScanner>();
+        navAgent = GetComponent<NavMeshAgent>();
+        navAgent.SetDestination(PatrolPoints[nextPatrolPoint]);
+        navAgent.speed = normalSpeed;
+        
     }
 
-    // Update is called once per frame
     void Update()
     {
-        DetectPlayer();
-        UpdateBehaviourState();
+        SwitchState();
+        HandleTerrainSpeed();
+        UpdateUI();
+
     }
 
-    private void UpdateBehaviourState()
+    void Awake()
     {
+        GlobalGunnerCount++;
+        myID = GlobalGunnerCount;
+        currentHealth = maxHealth;
+        UpdateUI();
+    }
+    private void SwitchState()
+    {
+        switch (currentState)
+        {
+            case GunnerState.Patrol:
+                Patrol();
+                break;
+            case GunnerState.Chase:
+                Chase();
+                break;
+            case GunnerState.Attack:
+                Attack();
+                break;
+            case GunnerState.Retreat:
+                Retreat();
+                break;
 
-        if (!isPlayerVisible && !isPlayerInRange) 
-        {
-            Patroling();
-        }
-        else if (isPlayerVisible && !isPlayerInRange) 
-        {
-            PeformChase();
-        }
-        else if (isPlayerInRange && isPlayerVisible) 
-        {
-            PerformAttack();
+            default:
+                Patrol();
+                break;
         }
     }
 
 
-    private void Patroling() 
+    private void Retreat()
     {
-        if (!hasPatrolPoint) 
+
+        // 1. Find a spot if we haven't already
+        if (!isRetreating)
         {
-            FindPatrolPoint();
+            meshRenderer.material = RetreatMaterial;
+            State.color = RetreatMaterial.color;
+            HP.color = Color.red;
+            navAgent.isStopped = false; // Make sure we can move
+            Vector3 coverPos = FindCoverPosition();
+            navAgent.SetDestination(coverPos);
+            isRetreating = true;
         }
-        if (hasPatrolPoint) 
+
+        // 2. Once we arrive at the cover spot
+        if (!navAgent.pathPending && navAgent.remainingDistance < 0.5f)
         {
-            navAgent.SetDestination(currentPatrolPoint);
-        }
-        //Reached the patrol point
-        if (Vector3.Distance(transform.position ,currentPatrolPoint) < 1f) 
-        {
-            hasPatrolPoint = false;
+            // Turn to face the player (defensive stance)
+            transform.LookAt(playerTransform);
+
+            // Heal over time
+            currentHealth += Time.deltaTime * 10f; // Heal 10 HP per second
+            HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+            // 3. Transition: If healed to 50%, go back to Patrol
+            if (currentHealth >= maxHealth * 0.5f)
+            {
+                currentHealth = maxHealth * 0.5f; 
+                HP.color = Color.green;
+                isRetreating = false; // Reset for next time
+                currentState = GunnerState.Patrol;
+            }
         }
     }
-    private void PeformChase() 
+
+    private void Attack()
     {
-        if (playerTransform != null)
-        {
-            navAgent.SetDestination(playerTransform.position);
-        }
-    }
-    private void PerformAttack()  
-    {
-        navAgent.SetDestination(transform.position);
+        navAgent.ResetPath();
+        meshRenderer.material = AttackMaterial;
+        State.color = AttackMaterial.color;
         transform.LookAt(playerTransform);
-        if (!isOnAttackCoolDown) 
+
+        //shooting login
+        if (Time.time > nextShootTime)
         {
-            Fire();
-            StartCoroutine(AttackCooldownRoutine());
+            nextShootTime = Time.time + FireRate;
+            FireOneBullet(Gun_01);
+            FireOneBullet(Gun_02);
+
         }
-    }
-    private IEnumerator AttackCooldownRoutine()
-    {
-        isOnAttackCoolDown = true;
-        yield return new WaitForSeconds(attackCooldown);
-        isOnAttackCoolDown = false;
-    }
-    private void FindPatrolPoint() 
-    {
-        float randomX = Random.Range(-patrolRadius, patrolRadius);
-        float randomY = Random.Range(-patrolRadius, patrolRadius);
 
-        Vector3 potentialPoint  = new Vector3(transform.position.x + randomX, transform.position.y, transform.position.z + randomY);
-
-        if (Physics.Raycast(potentialPoint, -transform.up, 2f, groundLayer)) 
+        //Transition back to chase
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+        if (distanceToPlayer > AttackRange)
         {
-            currentPatrolPoint = potentialPoint;
-            hasPatrolPoint = true;
+            currentState = GunnerState.Chase;
+
+        }
+        if (currentHealth < maxHealth * 0.3f)
+        {
+            currentState = GunnerState.Retreat;
         }
 
     }
-    private void Fire() 
+
+    private void Chase()
     {
-        if (bulletPrefab == null || firePoint1 == null ) return;
-        
-            Rigidbody projectileRb1 = Instantiate(bulletPrefab, firePoint1.position, firePoint1.rotation).GetComponent<Rigidbody>();
-        projectileRb1.velocity = firePoint1.forward * 20f;
+        meshRenderer.material = ChaseMaterial;
+        State.color = ChaseMaterial.color;
 
+        navAgent.SetDestination(playerTransform.position);
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
+        //Transation to Attach Close enough
+        if (distanceToPlayer <= AttackRange)
+        {
+            currentState = GunnerState.Attack;
+            return;
+        }
+        //Transation toif Player gets away
+        if (distanceToPlayer > engagementRange)
+        {
+            currentState = GunnerState.Patrol;
+            navAgent.ResetPath();
+            return;
+
+        }
 
     }
-    private void DetectPlayer()
+
+
+    private void Patrol()
     {
-        isPlayerInRange = Physics.CheckSphere(transform.position, engagementRange, playerLayer);
-        isPlayerVisible = Physics.CheckSphere(transform.position, visionRange, playerLayer);
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+
+        if (distanceToPlayer <= engagementRange)
+        {
+            currentState = GunnerState.Chase;
+            return;
+        }
+
+        if (!navAgent.hasPath || navAgent.velocity.sqrMagnitude == 0f)
+        {
+            meshRenderer.material = PatrolMaterial;
+            State.color = PatrolMaterial.color;
+
+            nextPatrolPoint = (nextPatrolPoint + 1) % PatrolPoints.Length;
+            navAgent.SetDestination((PatrolPoints[nextPatrolPoint]));
+        }
+    }
+
+
+    private Vector3 FindCoverPosition()
+    {
+        // Try 5 times to find a spot hidden behind a wall
+        for (int i = 0; i < 5; i++)
+        {
+            // Pick a random spot nearby
+            Vector3 randomPoint = transform.position + Random.insideUnitSphere * retreatDistance;
+            NavMeshHit hit;
+
+            // Check if that spot is valid on the NavMesh
+            if (NavMesh.SamplePosition(randomPoint, out hit, 2f, NavMesh.AllAreas))
+            {
+                Vector3 possibleCoverSpot = hit.position;
+
+                // Raycast Check: Can the player see this spot?
+                Vector3 directionToPlayer = (playerTransform.position - possibleCoverSpot).normalized;
+                float distanceToPlayer = Vector3.Distance(possibleCoverSpot, playerTransform.position);
+
+                // If the ray hits a "Wall" (obstacleMask) before hitting the player, it is safe.
+                if (Physics.Raycast(possibleCoverSpot, directionToPlayer, distanceToPlayer, wallLayer))
+                {
+                    return possibleCoverSpot; // Found a hidden spot!
+                }
+            }
+        }
+
+        // Fallback: If no walls found, just run directly away from the player
+        Vector3 runAwayDirection = (transform.position - playerTransform.position).normalized;
+        Vector3 runAwayPos = transform.position + runAwayDirection * retreatDistance;
+
+        NavMeshHit finalHit;
+        if (NavMesh.SamplePosition(runAwayPos, out finalHit, 2f, NavMesh.AllAreas))
+        {
+            return finalHit.position;
+        }
+
+        return transform.position; // Stay put if trapped
+    }
+
+
+
+    public void TakeDamage(float damageAmount)
+    {
+
+        currentHealth -= damageAmount;
+        HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+
+        if (currentHealth <= 0)
+        {
+            Destroy(gameObject, 0.5f);
+        }
     }
 
     private void OnDrawGizmosSelected()
@@ -154,7 +296,64 @@ public class DoubleGunner : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRange);
     }
-     
+
+    public void Die()
+    {
+        // Enemy death logic
+        Destroy(gameObject, 0.2f);
+    }
+
+    private void HandleTerrainSpeed()
+    {
+        float speedMultiplier = 1f;
+        if (scanner != null)
+        {
+            speedMultiplier = scanner.GetSpeedMultiplier();
+        }
+
+        float targetSpeed = normalSpeed * speedMultiplier;
+        navAgent.speed = Mathf.Lerp(navAgent.speed, targetSpeed, Time.deltaTime * 5f);
+    }
 
 
+    void UpdateUI()
+    {
+        if (Name && State && HP != null)
+        {
+            Name.text = "ID: " + myID.ToString("D2");
+            State.text = "STATE: " + currentState.ToString();
+            HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
+            HP.color = Color.green;
+            
+
+            // Billboard effect
+            if (Camera.main != null)
+            {
+                Name.transform.rotation = Camera.main.transform.rotation;
+                State.transform.rotation = Camera.main.transform.rotation;
+                HP.transform.rotation = Camera.main.transform.rotation;
+            }
+        }
+    }
+
+    void FireOneBullet(Transform spawnPoint)
+    {
+        if (spawnPoint == null) return; 
+
+        GameObject b = Instantiate(Bullet, spawnPoint.position, spawnPoint.rotation);
+        Bullet script = b.GetComponent<Bullet>();
+
+
+        if (script != null)
+        {
+            script.minDamage = bullet_Min_Damage; 
+            script.maxDamage = bullet_Max_Damage;
+            script.Speed = bulletSpeed;     
+            script.owner = this.gameObject;
+        }
+
+        // --- PHYSICS ---
+        Rigidbody rb = b.GetComponent<Rigidbody>();
+        if (rb) rb.velocity = spawnPoint.forward * (script ? script.Speed : 10f);
+    }
 }
