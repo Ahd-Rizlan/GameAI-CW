@@ -3,160 +3,164 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class TerrainGenerator : MonoBehaviour
 {
-    [Header("Terrain generation")]
-    public int Width;
-    public int Depth;
-    public Gradient gradient;
+    [Header("Terrain Generation Settings")]
+    // Requirement: Minimum 50x50 grid 
+    [Range(50, 250)]
+    public int Width = 50;
+    [Range(50, 250)]
+    public int Depth = 50;
     public int Seed;
-    [Range(1, 100)]
-    public int Octaves;
-    [Range(1, 100)]
-    public float NoiseScale;
-    [Range(0, 1)]
-    public float Persistance;
-    [Range(1, 100)]
-    public float Lacunarity;
-    [Range(1, 100)]
-    public float HeightMultiplier;
-    [Range(0, 1)]
-    public float HeightTreshhold;
     public Vector2 Offset;
 
-    [Header("Vertex visualization")]
-    public GameObject VertexObject;
-    public bool VisualizeVertices;
+    [Header("Perlin Noise Settings")]
+    [Range(1, 100)]
+    public float NoiseScale = 20f;
+    [Range(1, 10)]
+    public int Octaves = 4;
+    [Range(0, 1)]
+    public float Persistance = 0.5f;
+    [Range(1, 10)]
+    public float Lacunarity = 2f;
 
-    [Header("Voronoi Settings")]
-    public bool UseVoronoi = true;
+    [Header("Advanced: Voronoi Noise")]
+    // Requirement: Layering multiple noise functions / Voronoi 
+    public bool UseVoronoi = false;
     public float VoronoiScale = 5f;
     [Range(0, 1)]
-    public float VoronoiBlend = 0.5f;
+    public float VoronoiBlend = 0.3f; // How much Voronoi affects the terrain
 
-    private Vector3[] vertices;
-    private int[] trianglePoints;
-    Vector2[] uvs;
-    Color[] colors;
+    [Header("Height Settings")]
+    public float HeightMultiplier = 5f;
+    public AnimationCurve HeightCurve; // Replaces simple Threshold for better control
+    public Gradient Gradient; // For coloring based on height
+
+    [Header("Visualization")]
+    public bool AutoUpdate = true;
+    public bool VisualizeVertices = false;
+
+    // Internal Data
     private Mesh mesh;
-    private MeshFilter meshFilter;
-    private float minHeight;
-    private float maxHeight;
-    // Start is called before the first frame update
+    private Vector3[] vertices;
+    private int[] triangles;
+    private Vector2[] uvs;
+    private Color[] colors;
+    private float minTerrainHeight;
+    private float maxTerrainHeight;
+
     void Start()
     {
         mesh = new Mesh();
         mesh.name = "Procedural Terrain";
-        meshFilter = GetComponent<MeshFilter>();
-        meshFilter.mesh = mesh;
+        GetComponent<MeshFilter>().mesh = mesh;
 
-        CreateMesh();
-        UpdateMesh();
-        if (VisualizeVertices)
+        GenerateTerrain();
+    }
+
+    // CRITICAL FIX: Moved out of Update() to save performance
+    // This runs only when you change a value in the Inspector
+    void OnValidate()
+    {
+        if (Width < 1) Width = 1;
+        if (Depth < 1) Depth = 1;
+        if (Lacunarity < 1) Lacunarity = 1;
+        if (Octaves < 0) Octaves = 0;
+
+        if (AutoUpdate)
         {
-            DrawVertices();
+            // We create a slight delay or check if mesh exists to avoid errors during compilation
+            // But for simple editor tweaking, direct call is fine if handled carefully
+            // In a full game, you'd want to check if Application.isPlaying
+            if (mesh != null)
+                GenerateTerrain();
         }
     }
 
-    private void Update()
+    // Use this to manually trigger generation if needed
+    public void GenerateTerrain()
     {
+        if (mesh == null)
+        {
+            mesh = new Mesh();
+            GetComponent<MeshFilter>().mesh = mesh;
+        }
+
         CreateMesh();
         UpdateMesh();
-
     }
-    private void DrawVertices()
+
+    void CreateMesh()
     {
-        for (int i = 0; i < vertices.Length; i++)
+        vertices = new Vector3[(Width + 1) * (Depth + 1)];
+        uvs = new Vector2[vertices.Length];
+        triangles = new int[Width * Depth * 6];
+        colors = new Color[vertices.Length]; // Initialize colors array
+
+        // Get our noise map (Perlin + Voronoi)
+        // This map is already strictly 0.0 to 1.0
+        float[] heightMap = GenerateNoiseMap();
+
+        // 1. Generate Vertices, UVs, and Colors
+        for (int i = 0, z = 0; z <= Depth; z++)
         {
-            Instantiate(VertexObject, vertices[i], Quaternion.identity, transform);
+            for (int x = 0; x <= Width; x++)
+            {
+                // Get the normalized height (0 to 1)
+                float heightPercent = heightMap[i];
+
+                // Calculate actual world Y position
+                float y = HeightCurve.Evaluate(heightPercent) * HeightMultiplier;
+
+                vertices[i] = new Vector3(x, y, z);
+                uvs[i] = new Vector2((float)x / Width, (float)z / Depth);
+
+                // FIX: Use the heightPercent directly for the gradient
+                // 0 = Lowest point (Water), 1 = Highest point (Mountain Peak)
+                colors[i] = Gradient.Evaluate(heightPercent);
+
+                i++;
+            }
+        }
+
+        // 2. Generate Triangles (Standard Grid Logic)
+        int vert = 0;
+        int tris = 0;
+        for (int z = 0; z < Depth; z++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                triangles[tris + 0] = vert + 0;
+                triangles[tris + 1] = vert + Width + 1;
+                triangles[tris + 2] = vert + 1;
+                triangles[tris + 3] = vert + 1;
+                triangles[tris + 4] = vert + Width + 1;
+                triangles[tris + 5] = vert + Width + 2;
+
+                vert++;
+                tris += 6;
+            }
+            vert++;
         }
     }
 
-    private void UpdateMesh()
+    void UpdateMesh()
     {
         mesh.Clear();
         mesh.vertices = vertices;
-        mesh.triangles = trianglePoints;
+        mesh.triangles = triangles;
         mesh.uv = uvs;
         mesh.colors = colors;
         mesh.RecalculateNormals();
     }
 
-    void CreateMesh()
+    float[] GenerateNoiseMap()
     {
-        //Vertices
-        vertices = new Vector3[(Width + 1) * (Depth + 1)];
-        var noiseArray = PerlinNoise();
-
-        int i = 0;
-        for (int z = 0; z <= Depth; z++)
-        {
-            for (int x = 0; x <= Width; x++)
-            {
-                var currentHeight = noiseArray[i];
-                if (currentHeight > HeightTreshhold)
-                {
-                    currentHeight *= HeightMultiplier;
-                }
-                vertices[i] = new Vector3(x, currentHeight, z);
-                i++;
-            }
-        }
-
-        //Triangles
-        trianglePoints = new int[Width * Depth * 6];
-        int currentTrianglePoint = 0;
-        int currentVertexPoint = 0;
-
-        for (int z = 0; z < Depth; z++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                trianglePoints[currentTrianglePoint + 0] = currentVertexPoint + 0;
-                trianglePoints[currentTrianglePoint + 1] = currentVertexPoint + Width + 1;
-                trianglePoints[currentTrianglePoint + 2] = currentVertexPoint + 1;
-                trianglePoints[currentTrianglePoint + 3] = currentVertexPoint + 1;
-                trianglePoints[currentTrianglePoint + 4] = currentVertexPoint + Width + 1;
-                trianglePoints[currentTrianglePoint + 5] = currentVertexPoint + Width + 2;
-
-                currentVertexPoint++;
-                currentTrianglePoint += 6;
-            }
-            currentVertexPoint++;
-        }
-
-        //UVs
-        uvs = new Vector2[vertices.Length];
-        i = 0;
-        for (int z = 0; z <= Depth; z++)
-        {
-            for (int x = 0; x <= Width; x++)
-            {
-                uvs[i] = new Vector2((float)x / Width, (float)z / Depth);
-                i++;
-            }
-        }
-
-        //Colors
-        colors = new Color[vertices.Length];
-        i = 0;
-        for (int z = 0; z <= Depth; z++)
-        {
-            for (int x = 0; x <= Width; x++)
-            {
-                float height = Mathf.InverseLerp(minHeight * HeightMultiplier, maxHeight * HeightMultiplier, vertices[i].y);
-                colors[i] = gradient.Evaluate(height);
-                i++;
-            }
-        }
-    }
-
-    float[] PerlinNoise()
-    {
-        float[] noiseArray = new float[(Width + 1) * (Depth + 1)];
-
+        float[] noiseMap = new float[(Width + 1) * (Depth + 1)];
         System.Random prng = new System.Random(Seed);
         Vector2[] octaveOffsets = new Vector2[Octaves];
+
         for (int i = 0; i < Octaves; i++)
         {
             float offsetX = prng.Next(-100000, 100000) + Offset.x;
@@ -164,128 +168,122 @@ public class TerrainGenerator : MonoBehaviour
             octaveOffsets[i] = new Vector2(offsetX, offsetY);
         }
 
+        float maxNoiseHeight = float.MinValue;
+        float minNoiseHeight = float.MaxValue;
         float halfWidth = Width / 2f;
         float halfDepth = Depth / 2f;
 
-        //Apply lacunarity and persistence
-        int n = 0;
-        for (int z = 0; z <= Depth; z++)
+        for (int i = 0, z = 0; z <= Depth; z++)
         {
             for (int x = 0; x <= Width; x++)
             {
-
                 float amplitude = 1;
                 float frequency = 1;
                 float noiseHeight = 0;
 
-                //Use multiple frequencies (octaves)
-                for (int i = 0; i < Octaves; i++)
+                // --- Perlin Noise Layer ---
+                for (int o = 0; o < Octaves; o++)
                 {
-                    float sampleX = (x - halfWidth) / NoiseScale * frequency + octaveOffsets[i].x;
-                    float sampleY = (z - halfDepth) / NoiseScale * frequency + octaveOffsets[i].y;
+                    float sampleX = (x - halfWidth) / NoiseScale * frequency + octaveOffsets[o].x;
+                    float sampleY = (z - halfDepth) / NoiseScale * frequency + octaveOffsets[o].y;
 
                     float perlinValue = Mathf.PerlinNoise(sampleX, sampleY) * 2 - 1;
                     noiseHeight += perlinValue * amplitude;
 
                     amplitude *= Persistance;
                     frequency *= Lacunarity;
-
-                    if (UseVoronoi)
-                    {
-                        // Calculate Voronoi value for this specific coordinate
-                        // We normalize x/width so it fits the 0-1 range before scaling
-                        float vX = (float)x / Width;
-                        float vZ = (float)z / Depth;
-
-                        float voronoiValue = GetVoronoi(vX, vZ, VoronoiScale);
-
-                        // Blend: Linear interpolation between the Perlin noise height and Voronoi
-                        // Note: noiseHeight might be > 1 or < -1 due to octaves, 
-                        // but Voronoi is 0-1. You might need to tune 'VoronoiBlend'.
-
-                        noiseHeight = Mathf.Lerp(noiseHeight, noiseHeight * voronoiValue, VoronoiBlend);
-                        // OR for a different look: noiseHeight += voronoiValue * VoronoiBlend;
-                    }
-                    // --- NEW VORONOI CODE END ---
                 }
 
-                if (noiseHeight > maxHeight)
+                // --- Voronoi Noise Layer (Advanced) ---
+                if (UseVoronoi)
                 {
-                    maxHeight = noiseHeight;
+                    // Normalize coordinates for Voronoi
+                    float vX = (float)x / Width;
+                    float vZ = (float)z / Depth;
+
+                    float voronoiValue = GetVoronoi(vX, vZ, VoronoiScale);
+
+                    // Blend logic: Lerp towards the voronoi shape based on blend factor
+                    // Note: noiseHeight from perlin is roughly -1 to 1. Voronoi is 0 to 1.
+                    // We multiply voronoi by 2-1 to match ranges roughly if needed, or just overlay.
+                    float voronoiAdjusted = (voronoiValue * 2) - 1;
+                    noiseHeight = Mathf.Lerp(noiseHeight, voronoiAdjusted, VoronoiBlend);
                 }
-                else if (noiseHeight < minHeight)
-                {
-                    minHeight = noiseHeight;
-                }
-                noiseArray[n] = noiseHeight;
-                n++;
+
+                if (noiseHeight > maxNoiseHeight) maxNoiseHeight = noiseHeight;
+                if (noiseHeight < minNoiseHeight) minNoiseHeight = noiseHeight;
+
+                noiseMap[i] = noiseHeight;
+                i++;
             }
         }
 
-        //Normalize height
-        int k = 0;
-        for (int z = 0; z < Depth; z++)
+        // Normalize the map to 0-1
+        for (int i = 0; i < noiseMap.Length; i++)
         {
-            for (int x = 0; x < Width; x++)
-            {
-                noiseArray[k] = Mathf.InverseLerp(minHeight, maxHeight, noiseArray[k]);
-                k++;
-            }
+            noiseMap[i] = Mathf.InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[i]);
         }
 
-        return noiseArray;
+        return noiseMap;
     }
 
-
+    // --- Voronoi Helper Functions ---
     float GetVoronoi(float x, float z, float scale)
     {
-        // Scale the coordinates
         x *= scale;
         z *= scale;
-
-        // Determine the integer grid cell we are in
         int iX = Mathf.FloorToInt(x);
         int iZ = Mathf.FloorToInt(z);
-
         float minDistance = 1.0f;
 
-        // Check the current cell and the 8 surrounding neighbors
+        // Check 3x3 neighbor grid
         for (int yOffset = -1; yOffset <= 1; yOffset++)
         {
             for (int xOffset = -1; xOffset <= 1; xOffset++)
             {
-                // Neighbor cell coordinates
                 int neighborX = iX + xOffset;
                 int neighborZ = iZ + yOffset;
-
-                // Generate a random point within that neighbor cell based on its coordinate (pseudo-random)
-                // We use a hash function to get the same random point for the same cell every time
                 Vector2 point = GetRandomPointInCell(neighborX, neighborZ);
-
-                // Get the position of that point in world space relative to our current pixel
                 Vector2 diff = point + new Vector2(xOffset, yOffset) - new Vector2(x - iX, z - iZ);
-
-                // measure distance
                 float distance = diff.magnitude;
 
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                }
+                if (distance < minDistance) minDistance = distance;
             }
         }
-
-        // Invert so centers are high (peaks) and edges are low
-        return 1.0f - minDistance;
+        return 1.0f - minDistance; // Invert so center is high
     }
 
-    // Helper to get a deterministic random point for a cell
     Vector2 GetRandomPointInCell(int x, int z)
     {
-        // Simple pseudo-random hash based on coordinates
         System.Random prng = new System.Random((x * 89) + (z * 314) + Seed);
-        float pX = (float)prng.NextDouble();
-        float pZ = (float)prng.NextDouble();
-        return new Vector2(pX, pZ);
+        return new Vector2((float)prng.NextDouble(), (float)prng.NextDouble());
+    }
+
+    // --- Public Helper for Object Spawner ---
+    public float GetTerrainHeight(int x, int z)
+    {
+        // Clamp to ensure we don't go out of bounds
+        x = Mathf.Clamp(x, 0, Width);
+        z = Mathf.Clamp(z, 0, Depth);
+
+        int index = (z * (Width + 1)) + x;
+        if (vertices != null && index < vertices.Length)
+        {
+            return vertices[index].y;
+        }
+        return 0;
+    }
+
+    // Optional visualization using Gizmos (Better performance than instantiating objects)
+    private void OnDrawGizmos()
+    {
+        if (VisualizeVertices && vertices != null)
+        {
+            Gizmos.color = Color.yellow;
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Gizmos.DrawSphere(transform.TransformPoint(vertices[i]), 0.1f);
+            }
+        }
     }
 }
