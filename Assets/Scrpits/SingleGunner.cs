@@ -1,16 +1,18 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
+using UnityEngine;
 
-public class SniperBot : MonoBehaviour, IDamageable
+public class SingleGunner : MonoBehaviour, IDamageable
 {
     private static int GlobalSniperCount = 0;
     private int myID;
 
-    public enum SniperState
+    public enum SingleGunnerState
     {
         Patrol,
+        Chase,  
         Attack,
         Reposition,
         Search
@@ -34,23 +36,26 @@ public class SniperBot : MonoBehaviour, IDamageable
 
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 8f;
-    [SerializeField] private float turnSpeed = 6f;
-    [SerializeField] private float patrolRadius = 10f;
+    [SerializeField] private float turnSpeed = 3f;
+    [SerializeField] private float patrolRadius = 20f;
+    private float repathTimer = 0;
+    private float repathRate = 0.5f;
 
     [Header("Detection Settings")]
     [SerializeField] private float visionRange = 25f;
+    [SerializeField] private float attackRange = 15f; 
     [SerializeField] private float tooCloseRange = 8f;
 
     [Header("Combat Settings")]
-    [SerializeField] private float fireRate = 3.0f;
+    [SerializeField] private float fireRate = 2.0f;
     [SerializeField] private float nextShotTime = 0;
     [SerializeField] private float bulletSpeed = 15f;
-    [SerializeField] private float bullet_Min_Damage = 10f;
-    [SerializeField] private float bullet_Max_Damage = 20f;
+    [SerializeField] private float bullet_Min_Damage = 1f;
+    [SerializeField] private float bullet_Max_Damage = 5f;
 
     [Header("Material")]
     [SerializeField] private Material PatrolMaterial;
-    [SerializeField] private Material ChaseMaterial; // Used for Search
+    [SerializeField] private Material ChaseMaterial;
     [SerializeField] private Material AttackMaterial;
     [SerializeField] private Material RetreatMaterial;
 
@@ -59,15 +64,12 @@ public class SniperBot : MonoBehaviour, IDamageable
     private float searchTimer = 0;
 
     // Internal Logic variables
-    private SniperState currentState = SniperState.Patrol;
-    private TerrainScanner scanner;
+    private SingleGunnerState currentState = SingleGunnerState.Patrol;
 
     // Pathfinding Variables
     private Vector3[] path;
     private int targetIndex;
     private bool isMoving = false;
-
-    // --- FIX 1: Add this variable to stop spamming the Pathfinding system ---
     private bool isWaitingForPath = false;
 
     void Awake()
@@ -79,8 +81,7 @@ public class SniperBot : MonoBehaviour, IDamageable
     void Start()
     {
         currentHealth = maxHealth;
-        scanner = GetComponent<TerrainScanner>();
-        currentState = SniperState.Patrol;
+        currentState = SingleGunnerState.Patrol;
         UpdateUI();
     }
 
@@ -94,16 +95,19 @@ public class SniperBot : MonoBehaviour, IDamageable
     {
         switch (currentState)
         {
-            case SniperState.Patrol:
+            case SingleGunnerState.Patrol:
                 Patrol();
                 break;
-            case SniperState.Attack:
+            case SingleGunnerState.Chase: 
+                Chase();
+                break;
+            case SingleGunnerState.Attack:
                 Attack();
                 break;
-            case SniperState.Reposition:
+            case SingleGunnerState.Reposition:
                 Reposition();
                 break;
-            case SniperState.Search:
+            case SingleGunnerState.Search:
                 Search();
                 break;
             default:
@@ -119,18 +123,55 @@ public class SniperBot : MonoBehaviour, IDamageable
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = PatrolMaterial;
 
-        // Transition: See Player
+        // Transition Logic:
         if (distToPlayer < visionRange)
         {
-            currentState = SniperState.Attack;
+            // If we see the player, decide: Attack or Chase?
+            if (distToPlayer <= attackRange)
+            {
+                currentState = SingleGunnerState.Attack;
+            }
+            else
+            {
+                currentState = SingleGunnerState.Chase; // Target seen, but too far to shoot
+            }
             return;
         }
 
-        // Logic: Move randomly
-        // --- FIX 2: Only request if not moving AND not already waiting ---
         if (!isMoving && !isWaitingForPath)
         {
             RequestRandomPath();
+        }
+    }
+
+    // --- NEW METHOD: CHASE ---
+    private void Chase()
+    {
+        float distToPlayer = Vector3.Distance(transform.position, player.position);
+        if (meshRenderer) meshRenderer.material = ChaseMaterial;
+
+        // 1. Transition: Close enough to kill?
+        if (distToPlayer <= attackRange)
+        {
+            StopMoving(); // Stop running so we can shoot
+            currentState = SingleGunnerState.Attack;
+            return;
+        }
+
+        // 2. Transition: Player escaped vision?
+        if (distToPlayer > visionRange)
+        {
+            searchTimer = Time.time + searchDuration;
+            currentState = SingleGunnerState.Search;
+            return;
+        }
+
+        // 3. Logic: Run towards the player
+        // We constantly check if we need a new path to the player
+        if (!isMoving && !isWaitingForPath)
+        {
+            // Request path to PLAYER's position, not a random spot
+            RequestPathToPlayer();
         }
     }
 
@@ -139,18 +180,21 @@ public class SniperBot : MonoBehaviour, IDamageable
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = AttackMaterial;
 
-        // Logic: Stop and Shoot
         if (isMoving) StopMoving();
         AimAndShoot();
 
-        // --- DELETED: The check for 'tooCloseRange' is gone! ---
-        // It will now stand its ground even if you are 1 meter away.
+        // Transition: Player ran out of "Attack Zone" but is still visible
+        if (distToPlayer > attackRange && distToPlayer < visionRange)
+        {
+            currentState = SingleGunnerState.Chase; // Start running after him!
+            return;
+        }
 
-        // Transition: Player ran away -> Go to SEARCH
+        // Transition: Player ran completely away
         if (distToPlayer > visionRange)
         {
             searchTimer = Time.time + searchDuration;
-            currentState = SniperState.Search;
+            currentState = SingleGunnerState.Search;
             return;
         }
     }
@@ -160,42 +204,40 @@ public class SniperBot : MonoBehaviour, IDamageable
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = RetreatMaterial;
 
-        // Logic: Run away
-        if (!isMoving && !isWaitingForPath)
+        
+        if (Time.time > repathTimer && !isWaitingForPath)
         {
+            repathTimer = Time.time + repathRate;
             RequestRetreatPath();
         }
 
-        // Condition: Keep running until we are far enough away (Safe Distance)
-        // Once we are safe, turn around and start shooting again
-        if (distToPlayer > tooCloseRange * 2.0f) // Increased multiplier for safety
+        // Exit Condition: Safety reached
+        if (distToPlayer > tooCloseRange * 2.0f)
         {
             StopMoving();
-            currentState = SniperState.Attack;
+            currentState = SingleGunnerState.Attack;
         }
     }
 
     private void Search()
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
-        if (meshRenderer) meshRenderer.material = ChaseMaterial;
+        if (meshRenderer) meshRenderer.material = ChaseMaterial; // Reusing Chase material for search
 
-        // Logic: Spin around to look for target
         if (isMoving) StopMoving();
-
         transform.Rotate(Vector3.up * turnSpeed * 1f * Time.deltaTime);
 
-        // Transition: Found Player again
         if (distToPlayer < visionRange)
         {
-            currentState = SniperState.Attack;
+            // Found him! Determine range again.
+            if (distToPlayer <= attackRange) currentState = SingleGunnerState.Attack;
+            else currentState = SingleGunnerState.Chase;
             return;
         }
 
-        // Transition: Time up -> Go back to Patrol
         if (Time.time > searchTimer)
         {
-            currentState = SniperState.Patrol;
+            currentState = SingleGunnerState.Patrol;
         }
     }
 
@@ -205,7 +247,6 @@ public class SniperBot : MonoBehaviour, IDamageable
     {
         if (player == null) return;
 
-        // Rotate towards player (Y-axis only)
         Vector3 dir = (player.position - transform.position).normalized;
         dir.y = 0;
         if (dir != Vector3.zero)
@@ -213,7 +254,6 @@ public class SniperBot : MonoBehaviour, IDamageable
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 5f);
         }
 
-        // Fire Logic
         if (Time.time > nextShotTime)
         {
             nextShotTime = Time.time + fireRate;
@@ -238,14 +278,21 @@ public class SniperBot : MonoBehaviour, IDamageable
 
     void RequestRandomPath()
     {
-        isWaitingForPath = true; // --- FIX 4: Set Flag ---
+        isWaitingForPath = true;
         Vector3 randomSpot = transform.position + new Vector3(Random.Range(-patrolRadius, patrolRadius), 0, Random.Range(-patrolRadius, patrolRadius));
         pathfindingManager.FindPath(transform.position, randomSpot, this);
     }
 
+    // --- NEW HELPER ---
+    void RequestPathToPlayer()
+    {
+        isWaitingForPath = true;
+        pathfindingManager.FindPath(transform.position, player.position, this);
+    }
+
     void RequestRetreatPath()
     {
-        isWaitingForPath = true; // --- FIX 4: Set Flag ---
+        isWaitingForPath = true;
         Vector3 dir = (transform.position - player.position).normalized;
         Vector3 retreatSpot = transform.position + (dir * 10f);
         pathfindingManager.FindPath(transform.position, retreatSpot, this);
@@ -258,13 +305,12 @@ public class SniperBot : MonoBehaviour, IDamageable
         path = null;
     }
 
-    // Callback called by Pathfinding script
     public void OnPathFound(Vector3[] newPath, bool pathSuccessful)
     {
-        isWaitingForPath = false; // --- FIX 5: Reset Flag ---
+        isWaitingForPath = false;
 
-        // --- FIX 6: If we switched to Attack mode while waiting for path, ignore this path ---
-        if (currentState == SniperState.Attack) return;
+        // If we switched to Attack mode while waiting, ignore movement
+        if (currentState == SingleGunnerState.Attack) return;
 
         if (pathSuccessful)
         {
@@ -281,8 +327,6 @@ public class SniperBot : MonoBehaviour, IDamageable
         {
             targetIndex = 0;
             Vector3 currentWaypoint = path[0];
-
-            // Fix sinking
             currentWaypoint.y = transform.position.y;
 
             while (true)
@@ -296,12 +340,10 @@ public class SniperBot : MonoBehaviour, IDamageable
                         yield break;
                     }
                     currentWaypoint = path[targetIndex];
-                    currentWaypoint.y = transform.position.y; // Fix sinking
+                    currentWaypoint.y = transform.position.y;
                 }
 
-                float speedMult = (scanner != null) ? scanner.GetSpeedMultiplier() : 1f;
-
-                transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, moveSpeed * speedMult * Time.deltaTime);
+                transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, moveSpeed * Time.deltaTime);
 
                 Vector3 dir = currentWaypoint - transform.position;
                 if (dir != Vector3.zero)
@@ -314,18 +356,15 @@ public class SniperBot : MonoBehaviour, IDamageable
         }
     }
 
-    // --- INTERFACE IMPLEMENTATION ---
-
     public void TakeDamage(float amount)
     {
         currentHealth -= amount;
 
-        // THE TRIGGER: If I get shot, I run away immediately!
-        if (currentState != SniperState.Reposition)
+        // Defensive Reaction
+        if (currentState != SingleGunnerState.Reposition)
         {
-            currentState = SniperState.Reposition;
+            currentState = SingleGunnerState.Reposition;
             StopMoving();
-            // The Update loop will pick this up and call Reposition() next frame
         }
 
         if (currentHealth <= 0)
@@ -339,8 +378,6 @@ public class SniperBot : MonoBehaviour, IDamageable
         Destroy(gameObject, 0.2f);
     }
 
-    // --- UI & DEBUG ---
-
     void UpdateUI()
     {
         if (Name && State && HP != null)
@@ -348,7 +385,6 @@ public class SniperBot : MonoBehaviour, IDamageable
             Name.text = "ID: " + myID.ToString("D2");
             State.text = "STATE: " + currentState.ToString();
             HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
-
             HP.color = (currentHealth <= maxHealth * 0.3f) ? Color.red : Color.green;
 
             if (Camera.main != null)
@@ -360,10 +396,28 @@ public class SniperBot : MonoBehaviour, IDamageable
         }
     }
 
+    private void OnDrawGizmos()
+    {
+        if (path != null)
+        {
+            Gizmos.color = Color.black;
+            for (int i = targetIndex; i < path.Length; i++)
+            {
+                Gizmos.DrawCube(path[i], Vector3.one * 0.5f);
+                if (i == targetIndex) Gizmos.DrawLine(transform.position, path[i]);
+                else Gizmos.DrawLine(path[i - 1], path[i]);
+            }
+        }
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRange);
+
+        // Draw the new Attack Range
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, tooCloseRange);
