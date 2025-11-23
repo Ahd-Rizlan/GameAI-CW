@@ -7,7 +7,7 @@ using UnityEngine;
 public class TerrainGenerator : MonoBehaviour
 {
     [Header("Terrain Generation Settings")]
-    // Requirement: Minimum 50x50 grid 
+   
     [Range(50, 250)]
     public int Width = 50;
     [Range(50, 250)]
@@ -59,26 +59,41 @@ public class TerrainGenerator : MonoBehaviour
         GenerateTerrain();
     }
 
-    // CRITICAL FIX: Moved out of Update() to save performance
-    // This runs only when you change a value in the Inspector
+
+    // This runs when you change values in the Inspector
     void OnValidate()
     {
+        // 1. Safety Limits
         if (Width < 1) Width = 1;
         if (Depth < 1) Depth = 1;
         if (Lacunarity < 1) Lacunarity = 1;
         if (Octaves < 0) Octaves = 0;
 
+        // 2. The Logic Fix
         if (AutoUpdate)
         {
-            // We create a slight delay or check if mesh exists to avoid errors during compilation
-            // But for simple editor tweaking, direct call is fine if handled carefully
-            // In a full game, you'd want to check if Application.isPlaying
-            if (mesh != null)
-                GenerateTerrain();
+            // If we lost the reference to the mesh (happens after recompile), get it back
+            if (mesh == null)
+            {
+                MeshFilter filter = GetComponent<MeshFilter>();
+                if (filter != null)
+                {
+                    // If the MeshFilter has a mesh, use it. If not, make a new one.
+                    if (filter.sharedMesh != null)
+                        mesh = filter.sharedMesh;
+                    else
+                        mesh = new Mesh();
+
+                    filter.mesh = mesh;
+                }
+            }
+
+            // Now safely generate
+            GenerateTerrain();
         }
     }
 
-    // Use this to manually trigger generation if needed
+
     public void GenerateTerrain()
     {
         if (mesh == null)
@@ -89,6 +104,11 @@ public class TerrainGenerator : MonoBehaviour
 
         CreateMesh();
         UpdateMesh();
+
+        if (GetComponent< ObjectSpawner >() != null)
+        {
+            GetComponent< ObjectSpawner >().SpawnObjects();
+        }
     }
 
     void CreateMesh()
@@ -98,7 +118,7 @@ public class TerrainGenerator : MonoBehaviour
         triangles = new int[Width * Depth * 6];
         colors = new Color[vertices.Length]; // Initialize colors array
 
-        // Get our noise map (Perlin + Voronoi)
+        // noise map (Perlin + Voronoi)
         // This map is already strictly 0.0 to 1.0
         float[] heightMap = GenerateNoiseMap();
 
@@ -116,7 +136,7 @@ public class TerrainGenerator : MonoBehaviour
                 vertices[i] = new Vector3(x, y, z);
                 uvs[i] = new Vector2((float)x / Width, (float)z / Depth);
 
-                // FIX: Use the heightPercent directly for the gradient
+                
                 // 0 = Lowest point (Water), 1 = Highest point (Mountain Peak)
                 colors[i] = Gradient.Evaluate(heightPercent);
 
