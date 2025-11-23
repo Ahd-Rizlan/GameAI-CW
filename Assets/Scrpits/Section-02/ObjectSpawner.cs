@@ -9,15 +9,22 @@ public class ObjectSpawner : MonoBehaviour
     [Header("References")]
     public TerrainGenerator terrainGenerator;
     public NavMeshSurface navMeshSurface;
-    public Transform playerTransform; // Drag your Player here
+    public Transform playerTransform;
 
     [Header("Artefact Settings")]
-    public GameObject[] artefactPrefabs; // Drag your 6 prefabs here
-    public int amountPerType = 5; // Requirement: At least 3 of each [cite: 116]
+    public GameObject[] artefactPrefabs;
+    public int amountPerType = 3; 
+
+    [Header("Spawn Restrictions")]
+    [Tooltip("Any terrain lower than this is considered Deep Water")]
+    public float minSpawnHeight = 2.0f;
+
+    [Tooltip("Any terrain higher than this is considered Mountain Peak")]
+    public float maxSpawnHeight = 15.0f;
 
     [Header("Visualization")]
-    public bool showPathLines = true; // Requirement: Toggle visualization [cite: 121]
-    public LineRenderer lineRendererPrefab; // Optional: To draw lines
+    public bool showPathLines = true; 
+    public LineRenderer lineRendererPrefab;
 
     public void SpawnObjects()
     {
@@ -30,6 +37,7 @@ public class ObjectSpawner : MonoBehaviour
             int spawnedCount = 0;
             int attempts = 0;
 
+            // Try 100 times to find a valid spot for this object
             while (spawnedCount < amountPerType && attempts < 100)
             {
                 attempts++;
@@ -38,15 +46,17 @@ public class ObjectSpawner : MonoBehaviour
                 float randX = UnityEngine.Random.Range(0, terrainGenerator.Width);
                 float randZ = UnityEngine.Random.Range(0, terrainGenerator.Depth);
 
-                // B. Check Height (Don't spawn underwater)
+                // B. Get Height
                 float height = terrainGenerator.GetTerrainHeight((int)randX, (int)randZ);
 
-                // Assuming water is below a certain height (e.g., 30% of max height)
-                // You can tweak this logic based on your specific curve
-                if (height < 2f) continue; // Too low/underwater
+                // --- NEW LOGIC: Filter out Water and Mountains ---
+                // If it is too low (Water) OR too high (Mountain Peak), skip it
+                if (height < minSpawnHeight || height > maxSpawnHeight)
+                {
+                    continue;
+                }
 
                 Vector3 candidatePos = new Vector3(randX, height, randZ);
-
 
                 if (IsReachable(candidatePos))
                 {
@@ -59,16 +69,15 @@ public class ObjectSpawner : MonoBehaviour
 
     bool IsReachable(Vector3 targetPos)
     {
-        if (playerTransform == null) return true; // Skip check if no player
+        if (playerTransform == null) return true;
 
         NavMeshPath path = new NavMeshPath();
-        // Find closest point on NavMesh to our candidate position
-        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
+
+        // Increased search radius to 10f to handle uneven terrain better
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10.0f, NavMesh.AllAreas))
         {
-            // Calculate path from Player to Object
             NavMesh.CalculatePath(playerTransform.position, hit.position, NavMesh.AllAreas, path);
 
-            // If path is Complete, it's valid
             if (path.status == NavMeshPathStatus.PathComplete)
             {
                 if (showPathLines) DrawDebugPath(path);
@@ -80,11 +89,34 @@ public class ObjectSpawner : MonoBehaviour
 
     void DrawDebugPath(NavMeshPath path)
     {
-
-        // Simple debug draw (visible in Scene view)
+        // 1. Scene View Debug Lines (For Developer)
         for (int i = 0; i < path.corners.Length - 1; i++)
         {
             UnityEngine.Debug.DrawLine(path.corners[i], path.corners[i + 1], Color.cyan, 10f);
+        }
+
+        // 2. Game View Visualization (For Coursework)
+        if (lineRendererPrefab != null)
+        {
+            // Create the line object
+            LineRenderer line = Instantiate(lineRendererPrefab);
+
+            // Set the number of points
+            line.positionCount = path.corners.Length;
+
+            // --- THE FIX: Lift the line slightly above the ground ---
+            Vector3[] liftedCorners = new Vector3[path.corners.Length];
+            for (int i = 0; i < path.corners.Length; i++)
+            {
+                // Add 0.5f to the Y axis so it floats above grass/water
+                liftedCorners[i] = path.corners[i] + Vector3.up * 0.5f;
+            }
+
+            // Assign the lifted points to the line
+            line.SetPositions(liftedCorners);
+
+            // Cleanup: Destroy the line after 10 seconds
+            Destroy(line.gameObject, 10f);
         }
     }
 }

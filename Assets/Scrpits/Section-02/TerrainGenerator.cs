@@ -61,37 +61,38 @@ public class TerrainGenerator : MonoBehaviour
 
 
     // This runs when you change values in the Inspector
+#if UNITY_EDITOR // <--- This line tells Unity: "Only read this in the Editor"
     void OnValidate()
     {
-        // 1. Safety Limits
         if (Width < 1) Width = 1;
         if (Depth < 1) Depth = 1;
         if (Lacunarity < 1) Lacunarity = 1;
         if (Octaves < 0) Octaves = 0;
 
-        // 2. The Logic Fix
         if (AutoUpdate)
         {
-            // If we lost the reference to the mesh (happens after recompile), get it back
-            if (mesh == null)
+            // This code will now be IGNORED when building the game, fixing the error
+            UnityEditor.EditorApplication.delayCall += () =>
             {
-                MeshFilter filter = GetComponent<MeshFilter>();
-                if (filter != null)
+                if (this == null) return;
+
+                // Safety check to recover the mesh if lost
+                if (mesh == null)
                 {
-                    // If the MeshFilter has a mesh, use it. If not, make a new one.
-                    if (filter.sharedMesh != null)
-                        mesh = filter.sharedMesh;
-                    else
-                        mesh = new Mesh();
-
-                    filter.mesh = mesh;
+                    MeshFilter filter = GetComponent<MeshFilter>();
+                    if (filter != null)
+                    {
+                        if (filter.sharedMesh != null) mesh = filter.sharedMesh;
+                        else mesh = new Mesh();
+                        filter.mesh = mesh;
+                    }
                 }
-            }
 
-            // Now safely generate
-            GenerateTerrain();
+                if (mesh != null) GenerateTerrain();
+            };
         }
     }
+#endif // <--- Don't forget this closing line!
 
 
     public void GenerateTerrain()
