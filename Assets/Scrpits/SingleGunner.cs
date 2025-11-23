@@ -138,7 +138,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
             return;
         }
 
-        if (!isMoving && !isWaitingForPath)
+        if (Time.time > repathTimer && !isWaitingForPath)
         {
             RequestRandomPath();
         }
@@ -168,9 +168,9 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
         // 3. Logic: Run towards the player
         // We constantly check if we need a new path to the player
-        if (!isMoving && !isWaitingForPath)
+        if (Time.time > repathTimer && !isWaitingForPath)
         {
-            // Request path to PLAYER's position, not a random spot
+            repathTimer = Time.time + repathRate; // Reset timer
             RequestPathToPlayer();
         }
     }
