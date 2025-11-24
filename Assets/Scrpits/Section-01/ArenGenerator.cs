@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+// Note: If you get an error here, check "Window > Package Manager > Unity Registry" and install "AI Navigation"
+using Unity.AI.Navigation;
 
 public class ArenaGenerator : MonoBehaviour
 {
@@ -9,7 +11,10 @@ public class ArenaGenerator : MonoBehaviour
     public int height = 60;
 
     [Header("Performance Settings")]
-    public bool autoUpdate = false; // Check this ONLY if you want live updates
+    public bool autoUpdate = false;
+
+    [Tooltip("Click this checkbox to generate the map immediately.")]
+    public bool generateNow = false;
 
     [Header("Cellular Automata Settings")]
     public string seed;
@@ -19,17 +24,26 @@ public class ArenaGenerator : MonoBehaviour
     [Range(1, 10)]
     public int smoothingIterations = 5;
 
-    [Header("Terrain Settings")]
-    public float terrainScale = 0.1f;
-    [Range(0, 1)] public float waterThreshold = 0.3f;
-    [Range(0, 1)] public float sandThreshold = 0.5f;
+    [Header("Cluster Terrain Settings")]
+    [Tooltip("How many separate pools of water to spawn")]
+    public int waterPatches = 5;
+    [Tooltip("How many tiles big each water pool should be")]
+    public int waterPatchSize = 30;
+
+    [Space(5)]
+    [Tooltip("How many separate patches of mud/sand to spawn")]
+    public int sandPatches = 8;
+    [Tooltip("How many tiles big each mud patch should be")]
+    public int sandPatchSize = 20;
 
     [Header("References")]
     public GameObject wallPrefab;
     public GameObject floorPrefab;
     public GameObject sandPrefab;
     public GameObject waterPrefab;
-    public Grid pathfindingGrid;
+
+    // Optional: If you are using Unity's new NavMeshSurface
+    public NavMeshSurface navMeshSurface;
 
     [Header("Entity Spawning")]
     public GameObject playerPrefab;
@@ -38,14 +52,13 @@ public class ArenaGenerator : MonoBehaviour
     public int enemyCount = 3;
 
     private int[,] map;
-    private float terrainSeedOffset;
+    private Transform levelHolder;
 
     void Start()
     {
         GenerateArena();
     }
 
-    // Right-click the script in Inspector -> Select "Generate Now"
     [ContextMenu("Generate Now")]
     public void GenerateNow()
     {
@@ -58,8 +71,12 @@ public class ArenaGenerator : MonoBehaviour
         if (height < 20) height = 20;
         if (smoothingIterations < 0) smoothingIterations = 0;
 
-        // ONLY generate if we explicitly asked for auto-updates
-        // This prevents the editor from freezing while dragging sliders
+        if (generateNow)
+        {
+            generateNow = false;
+            GenerateArena();
+        }
+
         if (Application.isPlaying && autoUpdate)
         {
             GenerateArena();
@@ -68,48 +85,68 @@ public class ArenaGenerator : MonoBehaviour
 
     public void GenerateArena()
     {
-        // 0. Setup Seeds
         if (useRandomSeed) seed = System.DateTime.Now.Ticks.ToString();
-        terrainSeedOffset = Random.Range(0f, 9999f);
 
-        // 1. Clear old stuff
-        // Using a while loop is safer for immediate editor destruction
-        while (transform.childCount > 0)
+        // 1. Clean up Hierarchy
+        if (levelHolder != null)
         {
-            DestroyImmediate(transform.GetChild(0).gameObject);
+            DestroyImmediate(levelHolder.gameObject);
         }
 
+        GameObject holderObj = new GameObject("Level Holder");
+        holderObj.transform.parent = this.transform;
+        holderObj.transform.localPosition = Vector3.zero;
+        levelHolder = holderObj.transform;
+
+        // Clean up entities from previous run
         GameObject existingPlayer = GameObject.FindGameObjectWithTag("Player");
         if (existingPlayer) DestroyImmediate(existingPlayer);
 
-        // FindObjectsOfType is expensive, be careful using it often
         GameObject[] existingEnemies = GameObject.FindGameObjectsWithTag("Enemy");
         foreach (var e in existingEnemies) DestroyImmediate(e);
 
-        // 2. Initialize Map
+        // 2. Map Logic
         map = new int[width, height];
         RandomFillMap();
 
-        // 3. Run Cellular Automata Smoothing
         for (int i = 0; i < smoothingIterations; i++)
         {
             SmoothMap();
         }
 
-        // 4. Apply Terrain
-        ApplyTerrain();
+        ApplyTerrainClusters();
 
-        // 5. Build Visuals
+        // 3. Build Visuals
         BuildMesh();
 
-        // 6. Spawn Entities
+        // 4. Finalize (Bake THEN Spawn)
         if (Application.isPlaying)
         {
-            SpawnEntities();
-            // 7. Update Grid (Only needed at runtime)
+            // Stop any previous build routines
             StopAllCoroutines();
-            StartCoroutine(UpdateGrid());
+            // Start the sequence: Wait -> Bake -> Spawn
+            StartCoroutine(BuildLevelSequence());
         }
+    }
+
+    IEnumerator BuildLevelSequence()
+    {
+        // A. Wait for visual meshes (walls/floors) to initialize
+        yield return new WaitForEndOfFrame();
+
+        // B. Bake the NavMesh
+        if (navMeshSurface != null)
+        {
+            // Only look at the children of this generator (The Level Holder)
+            navMeshSurface.collectObjects = CollectObjects.Children;
+            navMeshSurface.BuildNavMesh();
+        }
+
+        // C. Wait one more frame to ensure NavMesh is valid in the system
+        yield return null;
+
+        // D. NOW it is safe to spawn entities. They will wake up on valid ground.
+        SpawnEntities();
     }
 
     void RandomFillMap()
@@ -121,13 +158,9 @@ public class ArenaGenerator : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 if (x == 0 || x == width - 1 || y == 0 || y == height - 1)
-                {
                     map[x, y] = 1;
-                }
                 else
-                {
                     map[x, y] = (pseudoRandom.Next(0, 100) < randomFillPercent) ? 1 : 0;
-                }
             }
         }
     }
@@ -135,19 +168,14 @@ public class ArenaGenerator : MonoBehaviour
     void SmoothMap()
     {
         int[,] nextMap = new int[width, height];
-
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 int neighborWallCount = GetSurroundingWallCount(x, y);
-
-                if (neighborWallCount > 4)
-                    nextMap[x, y] = 1;
-                else if (neighborWallCount < 4)
-                    nextMap[x, y] = 0;
-                else
-                    nextMap[x, y] = map[x, y];
+                if (neighborWallCount > 4) nextMap[x, y] = 1;
+                else if (neighborWallCount < 4) nextMap[x, y] = 0;
+                else nextMap[x, y] = map[x, y];
             }
         }
         map = nextMap;
@@ -167,32 +195,62 @@ public class ArenaGenerator : MonoBehaviour
                         if (map[neighborX, neighborY] == 1) wallCount++;
                     }
                 }
-                else
-                {
-                    wallCount++;
-                }
+                else wallCount++;
             }
         }
         return wallCount;
     }
 
-    void ApplyTerrain()
+    void ApplyTerrainClusters()
     {
-        for (int x = 0; x < width; x++)
+        for (int i = 0; i < waterPatches; i++)
         {
-            for (int y = 0; y < height; y++)
-            {
-                if (map[x, y] == 0)
-                {
-                    float noiseVal = Mathf.PerlinNoise((x * terrainScale) + terrainSeedOffset, (y * terrainScale) + terrainSeedOffset);
+            SpawnCluster(3, waterPatchSize);
+        }
+        for (int i = 0; i < sandPatches; i++)
+        {
+            SpawnCluster(2, sandPatchSize);
+        }
+    }
 
-                    if (noiseVal < waterThreshold)
-                        map[x, y] = 3;
-                    else if (noiseVal < sandThreshold)
-                        map[x, y] = 2;
+    void SpawnCluster(int tileType, int size)
+    {
+        Vector2Int startPos = GetRandomFloorCoord();
+        if (startPos == new Vector2Int(-1, -1)) return;
+
+        int currentX = startPos.x;
+        int currentY = startPos.y;
+
+        for (int i = 0; i < size; i++)
+        {
+            if (currentX > 0 && currentX < width - 1 && currentY > 0 && currentY < height - 1)
+            {
+                if (map[currentX, currentY] != 1)
+                {
+                    map[currentX, currentY] = tileType;
                 }
             }
+
+            int dir = Random.Range(0, 4);
+            switch (dir)
+            {
+                case 0: currentX++; break;
+                case 1: currentX--; break;
+                case 2: currentY++; break;
+                case 3: currentY--; break;
+            }
         }
+    }
+
+    Vector2Int GetRandomFloorCoord()
+    {
+        for (int i = 0; i < 20; i++)
+        {
+            int x = Random.Range(1, width - 1);
+            int y = Random.Range(1, height - 1);
+            if (map[x, y] == 0) return new Vector2Int(x, y);
+        }
+        return new Vector2Int(-1, -1);
     }
 
     void BuildMesh()
@@ -217,14 +275,14 @@ public class ArenaGenerator : MonoBehaviour
                         prefab = sandPrefab;
                         break;
                     case 3:
-                        pos.y = -0.2f;
+                        pos.y = 0f;
                         prefab = waterPrefab;
                         break;
                 }
 
                 if (prefab != null)
                 {
-                    Instantiate(prefab, pos, Quaternion.identity, transform);
+                    Instantiate(prefab, pos, Quaternion.identity, levelHolder);
                 }
             }
         }
@@ -234,7 +292,7 @@ public class ArenaGenerator : MonoBehaviour
     {
         if (playerPrefab != null)
         {
-            Vector3 spawnPos = GetRandomFloorTile();
+            Vector3 spawnPos = GetRandomSpawnTile();
             if (spawnPos != Vector3.zero)
             {
                 ForceSafeGround(spawnPos);
@@ -245,7 +303,7 @@ public class ArenaGenerator : MonoBehaviour
 
         for (int i = 0; i < enemyCount; i++)
         {
-            Vector3 spawnPos = GetRandomFloorTile();
+            Vector3 spawnPos = GetRandomSpawnTile();
             if (spawnPos != Vector3.zero)
             {
                 ForceSafeGround(spawnPos);
@@ -256,45 +314,30 @@ public class ArenaGenerator : MonoBehaviour
         }
     }
 
-    Vector3 GetRandomFloorTile()
+    Vector3 GetRandomSpawnTile()
     {
         List<Vector2Int> validTiles = new List<Vector2Int>();
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                if (map[x, y] == 0 || map[x, y] == 2)
-                {
+                if (map[x, y] != 1)
                     validTiles.Add(new Vector2Int(x, y));
-                }
             }
         }
 
         if (validTiles.Count == 0) return Vector3.zero;
-
         Vector2Int rnd = validTiles[Random.Range(0, validTiles.Count)];
-        float worldX = rnd.x - (width / 2);
-        float worldZ = rnd.y - (height / 2);
-        return new Vector3(worldX, 0, worldZ);
+        return new Vector3(rnd.x - (width / 2), 0, rnd.y - (height / 2));
     }
 
     void ForceSafeGround(Vector3 worldPos)
     {
         int x = Mathf.RoundToInt(worldPos.x + (width / 2));
         int y = Mathf.RoundToInt(worldPos.z + (height / 2));
-
         if (x >= 0 && x < width && y >= 0 && y < height)
         {
-            if (map[x, y] == 3 || map[x, y] == 1) map[x, y] = 0;
-        }
-    }
-
-    IEnumerator UpdateGrid()
-    {
-        yield return new WaitForEndOfFrame();
-        if (pathfindingGrid != null)
-        {
-            pathfindingGrid.SendMessage("CreateGrid", SendMessageOptions.DontRequireReceiver);
+            if (map[x, y] == 1) map[x, y] = 0;
         }
     }
 }
