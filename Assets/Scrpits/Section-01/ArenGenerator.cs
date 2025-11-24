@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-// Note: If you get an error here, check "Window > Package Manager > Unity Registry" and install "AI Navigation"
+using System;
 using Unity.AI.Navigation;
 
 public class ArenaGenerator : MonoBehaviour
@@ -24,16 +24,14 @@ public class ArenaGenerator : MonoBehaviour
     [Range(1, 10)]
     public int smoothingIterations = 5;
 
-    [Header("Cluster Terrain Settings")]
-    [Tooltip("How many separate pools of water to spawn")]
-    public int waterPatches = 5;
-    [Tooltip("How many tiles big each water pool should be")]
-    public int waterPatchSize = 30;
+    [Header("Connectivity Settings")]
+    public int passageWidth = 2;
 
+    [Header("Cluster Terrain Settings")]
+    public int waterPatches = 5;
+    public int waterPatchSize = 30;
     [Space(5)]
-    [Tooltip("How many separate patches of mud/sand to spawn")]
     public int sandPatches = 8;
-    [Tooltip("How many tiles big each mud patch should be")]
     public int sandPatchSize = 20;
 
     [Header("References")]
@@ -41,9 +39,8 @@ public class ArenaGenerator : MonoBehaviour
     public GameObject floorPrefab;
     public GameObject sandPrefab;
     public GameObject waterPrefab;
-
-    // Optional: If you are using Unity's new NavMeshSurface
     public NavMeshSurface navMeshSurface;
+    public Grid customGrid; // <--- ASSIGN YOUR GRID OBJECT HERE IN INSPECTOR
 
     [Header("Entity Spawning")]
     public GameObject playerPrefab;
@@ -85,27 +82,27 @@ public class ArenaGenerator : MonoBehaviour
 
     public void GenerateArena()
     {
+        System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        stopwatch.Start();
+
+
         if (useRandomSeed) seed = System.DateTime.Now.Ticks.ToString();
 
         // 1. Clean up Hierarchy
-        if (levelHolder != null)
-        {
-            DestroyImmediate(levelHolder.gameObject);
-        }
+        if (levelHolder != null) DestroyImmediate(levelHolder.gameObject);
 
         GameObject holderObj = new GameObject("Level Holder");
         holderObj.transform.parent = this.transform;
         holderObj.transform.localPosition = Vector3.zero;
         levelHolder = holderObj.transform;
 
-        // Clean up entities from previous run
         GameObject existingPlayer = GameObject.FindGameObjectWithTag("Player");
         if (existingPlayer) DestroyImmediate(existingPlayer);
 
         GameObject[] existingEnemies = GameObject.FindGameObjectsWithTag("Enemy");
         foreach (var e in existingEnemies) DestroyImmediate(e);
 
-        // 2. Map Logic
+        // 2. Map Generation
         map = new int[width, height];
         RandomFillMap();
 
@@ -114,40 +111,52 @@ public class ArenaGenerator : MonoBehaviour
             SmoothMap();
         }
 
+        // 3. FORCE CONNECTIVITY
+        ProcessMap();
+
+        // 4. Apply Terrain details
         ApplyTerrainClusters();
 
-        // 3. Build Visuals
+        // 5. Build Visuals
         BuildMesh();
 
-        // 4. Finalize (Bake THEN Spawn)
+        // 6. Finalize
         if (Application.isPlaying)
         {
-            // Stop any previous build routines
             StopAllCoroutines();
-            // Start the sequence: Wait -> Bake -> Spawn
             StartCoroutine(BuildLevelSequence());
         }
+
+        stopwatch.Stop();
+        UnityEngine.Debug.Log($"Generation Time: {stopwatch.ElapsedMilliseconds} ms");
     }
 
     IEnumerator BuildLevelSequence()
     {
-        // A. Wait for visual meshes (walls/floors) to initialize
+        // Wait for visual meshes to spawn
         yield return new WaitForEndOfFrame();
 
-        // B. Bake the NavMesh
+        // A. Update the Custom Grid (For Single Gunner)
+        if (customGrid != null)
+        {
+            customGrid.CreateGrid();
+        }
+
+        // B. Update NavMesh (For Double Gunner)
         if (navMeshSurface != null)
         {
-            // Only look at the children of this generator (The Level Holder)
             navMeshSurface.collectObjects = CollectObjects.Children;
             navMeshSurface.BuildNavMesh();
         }
 
-        // C. Wait one more frame to ensure NavMesh is valid in the system
+        // Wait one frame for the NavMesh/Grid to register
         yield return null;
 
-        // D. NOW it is safe to spawn entities. They will wake up on valid ground.
+        // C. Spawn Entities on valid ground
         SpawnEntities();
     }
+
+    // --- CELLULAR AUTOMATA LOGIC ---
 
     void RandomFillMap()
     {
@@ -201,16 +210,244 @@ public class ArenaGenerator : MonoBehaviour
         return wallCount;
     }
 
+    // --- CONNECTIVITY LOGIC ---
+
+    void ProcessMap()
+    {
+        List<List<Vector2Int>> wallRegions = GetRegions(1);
+        int wallThresholdSize = 5;
+        foreach (List<Vector2Int> wallRegion in wallRegions)
+        {
+            if (wallRegion.Count < wallThresholdSize)
+            {
+                foreach (Vector2Int tile in wallRegion) map[tile.x, tile.y] = 0;
+            }
+        }
+
+        List<List<Vector2Int>> floorRegions = GetRegions(0);
+        List<Room> roomList = new List<Room>();
+
+        foreach (List<Vector2Int> region in floorRegions)
+        {
+            roomList.Add(new Room(region, map));
+        }
+
+        if (roomList.Count > 0)
+        {
+            roomList.Sort();
+            roomList[0].isMainRoom = true;
+            roomList[0].isAccessibleFromMainRoom = true;
+            ConnectClosestRooms(roomList);
+        }
+    }
+
+    void ConnectClosestRooms(List<Room> allRooms, bool forceAccessibilityFromMainRoom = false)
+    {
+        List<Room> roomListA = new List<Room>();
+        List<Room> roomListB = new List<Room>();
+
+        if (forceAccessibilityFromMainRoom)
+        {
+            foreach (Room room in allRooms)
+            {
+                if (room.isAccessibleFromMainRoom) roomListB.Add(room);
+                else roomListA.Add(room);
+            }
+        }
+        else
+        {
+            roomListA = allRooms;
+            roomListB = allRooms;
+        }
+
+        int bestDistance = 0;
+        Vector2Int bestTileA = new Vector2Int();
+        Vector2Int bestTileB = new Vector2Int();
+        Room bestRoomA = new Room();
+        Room bestRoomB = new Room();
+        bool possibleConnectionFound = false;
+
+        foreach (Room roomA in roomListA)
+        {
+            if (!forceAccessibilityFromMainRoom)
+            {
+                possibleConnectionFound = false;
+                if (roomA.connectedRooms.Count > 0) continue;
+            }
+
+            foreach (Room roomB in roomListB)
+            {
+                if (roomA == roomB || roomA.IsConnected(roomB)) continue;
+
+                for (int tileIndexA = 0; tileIndexA < roomA.edgeTiles.Count; tileIndexA++)
+                {
+                    for (int tileIndexB = 0; tileIndexB < roomB.edgeTiles.Count; tileIndexB++)
+                    {
+                        Vector2Int tileA = roomA.edgeTiles[tileIndexA];
+                        Vector2Int tileB = roomB.edgeTiles[tileIndexB];
+                        int distanceBetweenRooms = (int)(Mathf.Pow(tileA.x - tileB.x, 2) + Mathf.Pow(tileA.y - tileB.y, 2));
+
+                        if (distanceBetweenRooms < bestDistance || !possibleConnectionFound)
+                        {
+                            bestDistance = distanceBetweenRooms;
+                            possibleConnectionFound = true;
+                            bestTileA = tileA;
+                            bestTileB = tileB;
+                            bestRoomA = roomA;
+                            bestRoomB = roomB;
+                        }
+                    }
+                }
+            }
+            if (possibleConnectionFound && !forceAccessibilityFromMainRoom)
+            {
+                CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB);
+            }
+        }
+
+        if (possibleConnectionFound && forceAccessibilityFromMainRoom)
+        {
+            CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB);
+            ConnectClosestRooms(allRooms, true);
+        }
+
+        if (!forceAccessibilityFromMainRoom)
+        {
+            ConnectClosestRooms(allRooms, true);
+        }
+    }
+
+    void CreatePassage(Room roomA, Room roomB, Vector2Int tileA, Vector2Int tileB)
+    {
+        Room.ConnectRooms(roomA, roomB);
+        List<Vector2Int> line = GetLine(tileA, tileB);
+        foreach (Vector2Int coord in line)
+        {
+            DrawCircle(coord, passageWidth);
+        }
+    }
+
+    void DrawCircle(Vector2Int c, int r)
+    {
+        for (int x = -r; x <= r; x++)
+        {
+            for (int y = -r; y <= r; y++)
+            {
+                if (x * x + y * y <= r * r)
+                {
+                    int drawX = c.x + x;
+                    int drawY = c.y + y;
+                    if (drawX >= 1 && drawX < width - 1 && drawY >= 1 && drawY < height - 1)
+                    {
+                        map[drawX, drawY] = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    List<Vector2Int> GetLine(Vector2Int from, Vector2Int to)
+    {
+        List<Vector2Int> line = new List<Vector2Int>();
+        int x = from.x;
+        int y = from.y;
+        int dx = to.x - from.x;
+        int dy = to.y - from.y;
+        bool inverted = false;
+        int step = Math.Sign(dx);
+        int gradientStep = Math.Sign(dy);
+        int longest = Mathf.Abs(dx);
+        int shortest = Mathf.Abs(dy);
+        if (longest < shortest)
+        {
+            inverted = true;
+            longest = Mathf.Abs(dy);
+            shortest = Mathf.Abs(dx);
+            step = Math.Sign(dy);
+            gradientStep = Math.Sign(dx);
+        }
+        int gradientAccumulation = longest / 2;
+        for (int i = 0; i < longest; i++)
+        {
+            line.Add(new Vector2Int(x, y));
+            if (inverted) y += step;
+            else x += step;
+            gradientAccumulation += shortest;
+            if (gradientAccumulation >= longest)
+            {
+                if (inverted) x += gradientStep;
+                else y += gradientStep;
+                gradientAccumulation -= longest;
+            }
+        }
+        return line;
+    }
+
+    List<List<Vector2Int>> GetRegions(int tileType)
+    {
+        List<List<Vector2Int>> regions = new List<List<Vector2Int>>();
+        int[,] mapFlags = new int[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (mapFlags[x, y] == 0 && map[x, y] == tileType)
+                {
+                    List<Vector2Int> newRegion = GetRegionTiles(x, y);
+                    regions.Add(newRegion);
+                    foreach (Vector2Int tile in newRegion)
+                    {
+                        mapFlags[tile.x, tile.y] = 1;
+                    }
+                }
+            }
+        }
+        return regions;
+    }
+
+    List<Vector2Int> GetRegionTiles(int startX, int startY)
+    {
+        List<Vector2Int> tiles = new List<Vector2Int>();
+        int[,] mapFlags = new int[width, height];
+        int tileType = map[startX, startY];
+
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+        queue.Enqueue(new Vector2Int(startX, startY));
+        mapFlags[startX, startY] = 1;
+
+        while (queue.Count > 0)
+        {
+            Vector2Int tile = queue.Dequeue();
+            tiles.Add(tile);
+
+            for (int x = tile.x - 1; x <= tile.x + 1; x++)
+            {
+                for (int y = tile.y - 1; y <= tile.y + 1; y++)
+                {
+                    if (x >= 0 && x < width && y >= 0 && y < height)
+                    {
+                        if (y == tile.y || x == tile.x)
+                        {
+                            if (mapFlags[x, y] == 0 && map[x, y] == tileType)
+                            {
+                                mapFlags[x, y] = 1;
+                                queue.Enqueue(new Vector2Int(x, y));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return tiles;
+    }
+
+    // --- TERRAIN & MESH ---
+
     void ApplyTerrainClusters()
     {
-        for (int i = 0; i < waterPatches; i++)
-        {
-            SpawnCluster(3, waterPatchSize);
-        }
-        for (int i = 0; i < sandPatches; i++)
-        {
-            SpawnCluster(2, sandPatchSize);
-        }
+        for (int i = 0; i < waterPatches; i++) SpawnCluster(3, waterPatchSize);
+        for (int i = 0; i < sandPatches; i++) SpawnCluster(2, sandPatchSize);
     }
 
     void SpawnCluster(int tileType, int size)
@@ -225,13 +462,9 @@ public class ArenaGenerator : MonoBehaviour
         {
             if (currentX > 0 && currentX < width - 1 && currentY > 0 && currentY < height - 1)
             {
-                if (map[currentX, currentY] != 1)
-                {
-                    map[currentX, currentY] = tileType;
-                }
+                if (map[currentX, currentY] != 1) map[currentX, currentY] = tileType;
             }
-
-            int dir = Random.Range(0, 4);
+            int dir = UnityEngine.Random.Range(0, 4);
             switch (dir)
             {
                 case 0: currentX++; break;
@@ -246,8 +479,8 @@ public class ArenaGenerator : MonoBehaviour
     {
         for (int i = 0; i < 20; i++)
         {
-            int x = Random.Range(1, width - 1);
-            int y = Random.Range(1, height - 1);
+            int x = UnityEngine.Random.Range(1, width - 1);
+            int y = UnityEngine.Random.Range(1, height - 1);
             if (map[x, y] == 0) return new Vector2Int(x, y);
         }
         return new Vector2Int(-1, -1);
@@ -261,29 +494,14 @@ public class ArenaGenerator : MonoBehaviour
             {
                 Vector3 pos = new Vector3(x - (width / 2), 0, y - (height / 2));
                 GameObject prefab = null;
-
                 switch (map[x, y])
                 {
-                    case 1:
-                        pos.y = 1;
-                        prefab = wallPrefab;
-                        break;
-                    case 0:
-                        prefab = floorPrefab;
-                        break;
-                    case 2:
-                        prefab = sandPrefab;
-                        break;
-                    case 3:
-                        pos.y = 0f;
-                        prefab = waterPrefab;
-                        break;
+                    case 1: pos.y = 1; prefab = wallPrefab; break;
+                    case 0: prefab = floorPrefab; break;
+                    case 2: prefab = sandPrefab; break;
+                    case 3: pos.y = 0f; prefab = waterPrefab; break;
                 }
-
-                if (prefab != null)
-                {
-                    Instantiate(prefab, pos, Quaternion.identity, levelHolder);
-                }
+                if (prefab != null) Instantiate(prefab, pos, Quaternion.identity, levelHolder);
             }
         }
     }
@@ -300,7 +518,6 @@ public class ArenaGenerator : MonoBehaviour
                 Instantiate(playerPrefab, spawnPos, Quaternion.identity);
             }
         }
-
         for (int i = 0; i < enemyCount; i++)
         {
             Vector3 spawnPos = GetRandomSpawnTile();
@@ -321,13 +538,11 @@ public class ArenaGenerator : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                if (map[x, y] != 1)
-                    validTiles.Add(new Vector2Int(x, y));
+                if (map[x, y] != 1) validTiles.Add(new Vector2Int(x, y));
             }
         }
-
         if (validTiles.Count == 0) return Vector3.zero;
-        Vector2Int rnd = validTiles[Random.Range(0, validTiles.Count)];
+        Vector2Int rnd = validTiles[UnityEngine.Random.Range(0, validTiles.Count)];
         return new Vector3(rnd.x - (width / 2), 0, rnd.y - (height / 2));
     }
 
@@ -339,5 +554,79 @@ public class ArenaGenerator : MonoBehaviour
         {
             if (map[x, y] == 1) map[x, y] = 0;
         }
+    }
+}
+
+// --- HELPER CLASS FOR CONNECTIVITY ---
+public class Room : IComparable<Room>
+{
+    public List<Vector2Int> tiles;
+    public List<Vector2Int> edgeTiles;
+    public List<Room> connectedRooms;
+    public int roomSize;
+    public bool isAccessibleFromMainRoom;
+    public bool isMainRoom;
+
+    public Room() { }
+
+    public Room(List<Vector2Int> roomTiles, int[,] map)
+    {
+        tiles = roomTiles;
+        roomSize = tiles.Count;
+        connectedRooms = new List<Room>();
+        edgeTiles = new List<Vector2Int>();
+
+        foreach (Vector2Int tile in tiles)
+        {
+            for (int x = tile.x - 1; x <= tile.x + 1; x++)
+            {
+                for (int y = tile.y - 1; y <= tile.y + 1; y++)
+                {
+                    if (x == tile.x || y == tile.y)
+                    {
+                        if (map[x, y] == 1)
+                        {
+                            edgeTiles.Add(tile);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void SetAccessibleFromMainRoom()
+    {
+        if (!isAccessibleFromMainRoom)
+        {
+            isAccessibleFromMainRoom = true;
+            foreach (Room connectedRoom in connectedRooms)
+            {
+                connectedRoom.SetAccessibleFromMainRoom();
+            }
+        }
+    }
+
+    public static void ConnectRooms(Room roomA, Room roomB)
+    {
+        if (roomA.isAccessibleFromMainRoom)
+        {
+            roomB.SetAccessibleFromMainRoom();
+        }
+        else if (roomB.isAccessibleFromMainRoom)
+        {
+            roomA.SetAccessibleFromMainRoom();
+        }
+        roomA.connectedRooms.Add(roomB);
+        roomB.connectedRooms.Add(roomA);
+    }
+
+    public bool IsConnected(Room otherRoom)
+    {
+        return connectedRooms.Contains(otherRoom);
+    }
+
+    public int CompareTo(Room otherRoom)
+    {
+        return otherRoom.roomSize.CompareTo(roomSize);
     }
 }

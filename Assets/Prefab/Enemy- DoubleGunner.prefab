@@ -362,6 +362,7 @@ GameObject:
   - component: {fileID: -5702685645572869732}
   - component: {fileID: 5313461359222861127}
   - component: {fileID: -1785938433156277011}
+  - component: {fileID: 1646776020223732371}
   m_Layer: 0
   m_Name: Enemy- DoubleGunner
   m_TagString: Enemy
@@ -435,10 +436,8 @@ MonoBehaviour:
   Bullet: {fileID: 8307514592340099864, guid: 8253ac0b4fd77c64db5f4a051a39d742, type: 3}
   maxHealth: 100
   currentHealth: 0
-  PatrolPoints:
-  - {x: -20, y: 1, z: 20}
-  - {x: -20, y: 1, z: -20}
-  - {x: 20, y: 1, z: 20}
+  patrolRadius: 20
+  patrolWaitTime: 1
   nextShootTime: 0
   FireRate: 2
   bulletSpeed: 7
@@ -505,6 +504,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1646776020223732371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3241154927606557213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c97b96bff58dc8b4e85ba912ec850a6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rayLength: 2
+  terrainTypes: []
 --- !u!1 &3400704191954996534
 GameObject:
   m_ObjectHideFlags: 0
@@ -677,7 +690,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.4638, y: 0.08}
+  m_AnchoredPosition: {x: 0.4638, y: 0.33}
   m_SizeDelta: {x: 40, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &559651561172945084
@@ -708,7 +721,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Patroling
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -811,7 +824,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.4638, y: -0.449}
+  m_AnchoredPosition: {x: 0.4638, y: -0.4}
   m_SizeDelta: {x: 40, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4292095807341191131
@@ -842,7 +855,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Patroling
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -945,7 +958,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.4638, y: 0.5751}
+  m_AnchoredPosition: {x: 0.4638, y: 1}
   m_SizeDelta: {x: 40, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8185501699423531793
@@ -976,7 +989,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ID-DG01
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

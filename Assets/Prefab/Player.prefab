@@ -208,7 +208,7 @@ MeshCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
-  m_Convex: 0
+  m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &2833042373447197230
@@ -375,17 +375,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3495073726534952141}
-  m_LocalRotation: {x: 0.27541363, y: -0, z: -0, w: 0.9613258}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1638801496912274215}
-  m_LocalEulerAnglesHint: {x: 31.973, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -1.95, y: -3.13}
-  m_SizeDelta: {x: 11.256401, y: 0.19820023}
+  m_AnchoredPosition: {x: -2.657, y: -0.8436}
+  m_SizeDelta: {x: 5.3141, y: 1.8854}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3942812775146039683
 CanvasRenderer:
@@ -449,8 +449,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 1
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -478,7 +478,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 1.7100143, y: 0, z: 6.7765064, w: -3.131843}
+  m_margin: {x: 0.032567263, y: 0, z: -0.004387617, w: -0.066994905}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -520,8 +520,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.0051, y: 0.4402}
-  m_SizeDelta: {x: 9.9898, y: 7.774}
+  m_AnchoredPosition: {x: 0.0283, y: 1.1638}
+  m_SizeDelta: {x: 5.3141, y: 4.3211}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &3267849582227576289
 Canvas:
@@ -650,6 +650,7 @@ MonoBehaviour:
   dodgeChance: 0.2
   meshRenderer: {fileID: 3297004068686002290}
   DodgeMaterial: {fileID: 2100000, guid: ebc44ff516c3f384597a3e85af647f3c, type: 2}
+  NormalMaterial: {fileID: 2100000, guid: 89d62b3c9363fd5478a9cd9a1f179d03, type: 2}
 --- !u!195 &-4171578990866236355
 NavMeshAgent:
   m_ObjectHideFlags: 0

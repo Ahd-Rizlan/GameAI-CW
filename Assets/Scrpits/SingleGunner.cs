@@ -12,7 +12,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     public enum SingleGunnerState
     {
         Patrol,
-        Chase,  
+        Chase,
         Attack,
         Reposition,
         Search
@@ -24,10 +24,10 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [SerializeField] private TMP_Text HP;
 
     [Header("References")]
-    [SerializeField] private Transform player;
+    [SerializeField] private Transform player; // Will be auto-assigned
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private Pathfinding pathfindingManager;
+    [SerializeField] private Pathfinding pathfindingManager; // Will be auto-assigned
     [SerializeField] private MeshRenderer meshRenderer;
 
     [Header("Health")]
@@ -43,7 +43,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     [Header("Detection Settings")]
     [SerializeField] private float visionRange = 25f;
-    [SerializeField] private float attackRange = 15f; 
+    [SerializeField] private float attackRange = 15f;
     [SerializeField] private float tooCloseRange = 8f;
 
     [Header("Combat Settings")]
@@ -80,6 +80,21 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void Start()
     {
+        // --- AUTO ASSIGNMENT FIX ---
+        if (player == null)
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) player = p.transform;
+            else Debug.LogError("SingleGunner could not find object with tag 'Player'!");
+        }
+
+        if (pathfindingManager == null)
+        {
+            pathfindingManager = FindObjectOfType<Pathfinding>();
+            if (pathfindingManager == null) Debug.LogError("SingleGunner could not find a 'Pathfinding' script in the scene!");
+        }
+        // ---------------------------
+
         currentHealth = maxHealth;
         currentState = SingleGunnerState.Patrol;
         UpdateUI();
@@ -87,6 +102,8 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void Update()
     {
+        if (player == null) return; // Don't do anything if player is dead/missing
+
         SwitchState();
         UpdateUI();
     }
@@ -98,7 +115,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
             case SingleGunnerState.Patrol:
                 Patrol();
                 break;
-            case SingleGunnerState.Chase: 
+            case SingleGunnerState.Chase:
                 Chase();
                 break;
             case SingleGunnerState.Attack:
@@ -204,7 +221,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = RetreatMaterial;
 
-        
+
         if (Time.time > repathTimer && !isWaitingForPath)
         {
             repathTimer = Time.time + repathRate;
@@ -278,6 +295,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void RequestRandomPath()
     {
+        if (pathfindingManager == null) return;
         isWaitingForPath = true;
         Vector3 randomSpot = transform.position + new Vector3(Random.Range(-patrolRadius, patrolRadius), 0, Random.Range(-patrolRadius, patrolRadius));
         pathfindingManager.FindPath(transform.position, randomSpot, this);
@@ -286,12 +304,14 @@ public class SingleGunner : MonoBehaviour, IDamageable
     // --- NEW HELPER ---
     void RequestPathToPlayer()
     {
+        if (pathfindingManager == null) return;
         isWaitingForPath = true;
         pathfindingManager.FindPath(transform.position, player.position, this);
     }
 
     void RequestRetreatPath()
     {
+        if (pathfindingManager == null) return;
         isWaitingForPath = true;
         Vector3 dir = (transform.position - player.position).normalized;
         Vector3 retreatSpot = transform.position + (dir * 10f);
