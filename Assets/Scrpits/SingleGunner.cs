@@ -44,7 +44,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [Header("Detection Settings")]
     [SerializeField] private float visionRange = 25f;
     [SerializeField] private float attackRange = 15f;
-    [SerializeField] private float tooCloseRange = 8f;
+    [SerializeField] private float tooCloseRange = 5f;
 
     [Header("Combat Settings")]
     [SerializeField] private float fireRate = 2.0f;
@@ -58,6 +58,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [SerializeField] private Material ChaseMaterial;
     [SerializeField] private Material AttackMaterial;
     [SerializeField] private Material RetreatMaterial;
+    [SerializeField] private Material SearchMaterial;
 
     [Header("Search Settings")]
     [SerializeField] private float searchDuration = 4f;
@@ -139,6 +140,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = PatrolMaterial;
+        State.color = (PatrolMaterial != null) ? PatrolMaterial.color : Color.blue;
 
         // Transition Logic:
         if (distToPlayer < visionRange)
@@ -166,6 +168,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = ChaseMaterial;
+        State.color = (ChaseMaterial != null) ? ChaseMaterial.color : Color.blue;
 
         // 1. Transition: Close enough to kill?
         if (distToPlayer <= attackRange)
@@ -196,6 +199,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = AttackMaterial;
+        State.color = (AttackMaterial != null) ? AttackMaterial.color : Color.blue;
 
         if (isMoving) StopMoving();
         AimAndShoot();
@@ -220,6 +224,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = RetreatMaterial;
+        State.color = (RetreatMaterial != null) ? RetreatMaterial.color : Color.blue;
 
 
         if (Time.time > repathTimer && !isWaitingForPath)
@@ -228,18 +233,27 @@ public class SingleGunner : MonoBehaviour, IDamageable
             RequestRetreatPath();
         }
 
-        // Exit Condition: Safety reached
-        if (distToPlayer > tooCloseRange * 2.0f)
+        
+       
+        if (distToPlayer > attackRange)
         {
             StopMoving();
             currentState = SingleGunnerState.Attack;
+        }
+
+      
+        if (distToPlayer < visionRange)
+        {
+            currentState = SingleGunnerState.Patrol;
         }
     }
 
     private void Search()
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
-        if (meshRenderer) meshRenderer.material = ChaseMaterial; // Reusing Chase material for search
+        if (meshRenderer) meshRenderer.material = SearchMaterial;
+        State.color = (SearchMaterial != null) ? SearchMaterial.color : Color.blue;
+
 
         if (isMoving) StopMoving();
         transform.Rotate(Vector3.up * turnSpeed * 1f * Time.deltaTime);
@@ -406,6 +420,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
             State.text = "STATE: " + currentState.ToString();
             HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
             HP.color = (currentHealth <= maxHealth * 0.3f) ? Color.red : Color.green;
+            
 
             if (Camera.main != null)
             {
