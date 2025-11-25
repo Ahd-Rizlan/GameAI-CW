@@ -34,8 +34,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.36, y: 0.07}
-  m_SizeDelta: {x: 45, y: 5}
+  m_AnchoredPosition: {x: 0, y: 0.38}
+  m_SizeDelta: {x: 48, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2967482302709384308
 CanvasRenderer:
@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: State
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -128,7 +128,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -0.09274292, y: 0.23570633, z: -3.9773712, w: -0.29035378}
+  m_margin: {x: -0.09274292, y: 0.23570633, z: -1.113348, w: -0.29035378}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -382,8 +382,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0.75}
-  m_SizeDelta: {x: 45, y: 5}
+  m_AnchoredPosition: {x: 0, y: 1.34}
+  m_SizeDelta: {x: 48, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8726666822358778390
 CanvasRenderer:
@@ -413,7 +413,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ID_SN_01
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -476,7 +476,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -3.9724426, y: 0.23570633, z: -3.744217, w: -0.29035378}
+  m_margin: {x: -0.0158062, y: 0.23570633, z: -0.263443, w: -0.29035378}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -495,6 +495,7 @@ GameObject:
   - component: {fileID: -8319077791780054}
   - component: {fileID: 2487362248068392815}
   - component: {fileID: -1374304941655035619}
+  - component: {fileID: 3599088036494299365}
   m_Layer: 3
   m_Name: Enemy - Single Gunner
   m_TagString: Enemy
@@ -511,7 +512,7 @@ Transform:
   m_GameObject: {fileID: 3006946234163074896}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 26.171879, y: 22.106197, z: 28.413754}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -618,6 +619,7 @@ MonoBehaviour:
   turnSpeed: 2
   patrolRadius: 10
   visionRange: 25
+  attackRange: 15
   tooCloseRange: 8
   fireRate: 3
   nextShotTime: 0
@@ -627,8 +629,23 @@ MonoBehaviour:
   PatrolMaterial: {fileID: 2100000, guid: e3520cd19fd863744b6272876a156155, type: 2}
   ChaseMaterial: {fileID: 2100000, guid: 3988110a19e7ebf4ca888a6d12e139f2, type: 2}
   AttackMaterial: {fileID: 2100000, guid: e65c1c311aec18c49967e4462c9c1aff, type: 2}
-  RetreatMaterial: {fileID: 2100000, guid: c8b6b09a2d529ce4a9f90808ab89698e, type: 2}
+  RetreatMaterial: {fileID: 2100000, guid: b7c6367c77b1f894b9656d25be123942, type: 2}
+  SearchMaterial: {fileID: 2100000, guid: c8b6b09a2d529ce4a9f90808ab89698e, type: 2}
   searchDuration: 2
+--- !u!114 &3599088036494299365
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3006946234163074896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c97b96bff58dc8b4e85ba912ec850a6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rayLength: 2
+  terrainTypes: []
 --- !u!1 &3143765305533641684
 GameObject:
   m_ObjectHideFlags: 0
@@ -663,8 +680,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.35, y: -0.6}
-  m_SizeDelta: {x: 45, y: 5}
+  m_AnchoredPosition: {x: 0, y: -0.6}
+  m_SizeDelta: {x: 48, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1791699527358250214
 CanvasRenderer:
@@ -694,7 +711,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Health
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -757,7 +774,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -0.09274292, y: 0.23570633, z: -3.1916199, w: -0.29035378}
+  m_margin: {x: -0.09274292, y: 0.23570633, z: -0.07323074, w: -0.29035378}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0

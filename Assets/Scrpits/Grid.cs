@@ -6,7 +6,7 @@ public class Grid : MonoBehaviour
     public LayerMask unwalkableMask;
     public Vector2 gridWorldSize;
     public float nodeRadius;
-    public TerrainType[] walkableRegions; // Assign "Mud", "Grass", etc. here
+    public TerrainType[] walkableRegions;
 
     Node[,] grid;
     float nodeDiameter;
@@ -14,8 +14,6 @@ public class Grid : MonoBehaviour
 
     LayerMask walkableMask;
     Dictionary<int, int> walkableRegionsDictionary = new Dictionary<int, int>();
-
-    // NEW: Dictionary to map Penalty -> Color so we can draw it later
     Dictionary<int, Color> penaltyColors = new Dictionary<int, Color>();
 
     void Awake()
@@ -24,24 +22,23 @@ public class Grid : MonoBehaviour
         gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter);
         gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
 
-        // Loop through Inspector settings to map Layers, Penalties, and Colors
         foreach (TerrainType region in walkableRegions)
         {
             walkableMask.value |= region.terrainMask.value;
             walkableRegionsDictionary.Add((int)Mathf.Log(region.terrainMask.value, 2), region.terrainPenalty);
 
-            // Store the color if it's not already added
             if (!penaltyColors.ContainsKey(region.terrainPenalty))
             {
                 penaltyColors.Add(region.terrainPenalty, region.regionColor);
             }
         }
-        CreateGrid();
+        // REMOVED: CreateGrid(); -> We don't run this automatically anymore!
     }
 
     public int MaxSize => gridSizeX * gridSizeY;
 
-    void CreateGrid()
+    // CHANGED: Made 'public' so ArenaGenerator can call it
+    public void CreateGrid()
     {
         grid = new Node[gridSizeX, gridSizeY];
         Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.forward * gridWorldSize.y / 2;
@@ -54,7 +51,6 @@ public class Grid : MonoBehaviour
                 bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkableMask));
                 int movementPenalty = 0;
 
-                // If the node is walkable, check what kind of terrain it is
                 if (walkable)
                 {
                     Ray ray = new Ray(worldPoint + Vector3.up * 50, Vector3.down);
@@ -109,23 +105,11 @@ public class Grid : MonoBehaviour
         {
             foreach (Node n in grid)
             {
-                // Default: Walkable = White, Unwalkable = Red
                 Gizmos.color = (n.walkable) ? Color.white : Color.red;
-
-                // Override: If it's walkable but has a penalty (Mud/Water/etc), use the custom color
                 if (n.walkable && n.movementPenalty > 0)
                 {
-                    if (penaltyColors.ContainsKey(n.movementPenalty))
-                    {
-                        Gizmos.color = penaltyColors[n.movementPenalty];
-                    }
-                    else
-                    {
-                        // Fallback color (Yellowish) if something goes wrong
-                        Gizmos.color = new Color(1, 0.92f, 0.016f, 0.5f);
-                    }
+                    if (penaltyColors.ContainsKey(n.movementPenalty)) Gizmos.color = penaltyColors[n.movementPenalty];
                 }
-
                 Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
             }
         }
@@ -137,5 +121,5 @@ public class TerrainType
 {
     public LayerMask terrainMask;
     public int terrainPenalty;
-    public Color regionColor; // <--- Pick this in Inspector
+    public Color regionColor;
 }
