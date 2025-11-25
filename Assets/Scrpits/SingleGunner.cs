@@ -12,7 +12,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     public enum SingleGunnerState
     {
         Patrol,
-        Chase,  
+        Chase,
         Attack,
         Reposition,
         Search
@@ -24,10 +24,10 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [SerializeField] private TMP_Text HP;
 
     [Header("References")]
-    [SerializeField] private Transform player;
+    [SerializeField] private Transform player; // Will be auto-assigned
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private Pathfinding pathfindingManager;
+    [SerializeField] private Pathfinding pathfindingManager; // Will be auto-assigned
     [SerializeField] private MeshRenderer meshRenderer;
 
     [Header("Health")]
@@ -43,8 +43,8 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     [Header("Detection Settings")]
     [SerializeField] private float visionRange = 25f;
-    [SerializeField] private float attackRange = 15f; 
-    [SerializeField] private float tooCloseRange = 8f;
+    [SerializeField] private float attackRange = 15f;
+    [SerializeField] private float tooCloseRange = 5f;
 
     [Header("Combat Settings")]
     [SerializeField] private float fireRate = 2.0f;
@@ -58,6 +58,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [SerializeField] private Material ChaseMaterial;
     [SerializeField] private Material AttackMaterial;
     [SerializeField] private Material RetreatMaterial;
+    [SerializeField] private Material SearchMaterial;
 
     [Header("Search Settings")]
     [SerializeField] private float searchDuration = 4f;
@@ -80,6 +81,21 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void Start()
     {
+        // --- AUTO ASSIGNMENT FIX ---
+        if (player == null)
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) player = p.transform;
+            else Debug.LogError("SingleGunner could not find object with tag 'Player'!");
+        }
+
+        if (pathfindingManager == null)
+        {
+            pathfindingManager = FindObjectOfType<Pathfinding>();
+            if (pathfindingManager == null) Debug.LogError("SingleGunner could not find a 'Pathfinding' script in the scene!");
+        }
+        // ---------------------------
+
         currentHealth = maxHealth;
         currentState = SingleGunnerState.Patrol;
         UpdateUI();
@@ -87,6 +103,8 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void Update()
     {
+        if (player == null) return; 
+
         SwitchState();
         UpdateUI();
     }
@@ -98,7 +116,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
             case SingleGunnerState.Patrol:
                 Patrol();
                 break;
-            case SingleGunnerState.Chase: 
+            case SingleGunnerState.Chase:
                 Chase();
                 break;
             case SingleGunnerState.Attack:
@@ -122,18 +140,18 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = PatrolMaterial;
+        State.color = (PatrolMaterial != null) ? PatrolMaterial.color : Color.blue;
 
-        // Transition Logic:
         if (distToPlayer < visionRange)
         {
-            // If we see the player, decide: Attack or Chase?
+            
             if (distToPlayer <= attackRange)
             {
                 currentState = SingleGunnerState.Attack;
             }
             else
             {
-                currentState = SingleGunnerState.Chase; // Target seen, but too far to shoot
+                currentState = SingleGunnerState.Chase; 
             }
             return;
         }
@@ -144,33 +162,28 @@ public class SingleGunner : MonoBehaviour, IDamageable
         }
     }
 
-    // --- NEW METHOD: CHASE ---
+  
     private void Chase()
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = ChaseMaterial;
+        State.color = (ChaseMaterial != null) ? ChaseMaterial.color : Color.blue;
 
-        // 1. Transition: Close enough to kill?
         if (distToPlayer <= attackRange)
         {
-            StopMoving(); // Stop running so we can shoot
+            StopMoving(); 
             currentState = SingleGunnerState.Attack;
             return;
         }
-
-        // 2. Transition: Player escaped vision?
         if (distToPlayer > visionRange)
         {
             searchTimer = Time.time + searchDuration;
             currentState = SingleGunnerState.Search;
             return;
         }
-
-        // 3. Logic: Run towards the player
-        // We constantly check if we need a new path to the player
         if (Time.time > repathTimer && !isWaitingForPath)
         {
-            repathTimer = Time.time + repathRate; // Reset timer
+            repathTimer = Time.time + repathRate;
             RequestPathToPlayer();
         }
     }
@@ -179,18 +192,17 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = AttackMaterial;
+        State.color = (AttackMaterial != null) ? AttackMaterial.color : Color.blue;
 
         if (isMoving) StopMoving();
         AimAndShoot();
 
-        // Transition: Player ran out of "Attack Zone" but is still visible
         if (distToPlayer > attackRange && distToPlayer < visionRange)
         {
-            currentState = SingleGunnerState.Chase; // Start running after him!
+            currentState = SingleGunnerState.Chase; 
             return;
         }
 
-        // Transition: Player ran completely away
         if (distToPlayer > visionRange)
         {
             searchTimer = Time.time + searchDuration;
@@ -199,12 +211,15 @@ public class SingleGunner : MonoBehaviour, IDamageable
         }
     }
 
+
+
     private void Reposition()
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = RetreatMaterial;
+        State.color = (RetreatMaterial != null) ? RetreatMaterial.color : Color.blue;
 
-        
+
         if (Time.time > repathTimer && !isWaitingForPath)
         {
             repathTimer = Time.time + repathRate;
@@ -222,14 +237,15 @@ public class SingleGunner : MonoBehaviour, IDamageable
     private void Search()
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
-        if (meshRenderer) meshRenderer.material = ChaseMaterial; // Reusing Chase material for search
+        if (meshRenderer) meshRenderer.material = SearchMaterial;
+        State.color = (SearchMaterial != null) ? SearchMaterial.color : Color.blue;
+
 
         if (isMoving) StopMoving();
         transform.Rotate(Vector3.up * turnSpeed * 1f * Time.deltaTime);
 
         if (distToPlayer < visionRange)
         {
-            // Found him! Determine range again.
             if (distToPlayer <= attackRange) currentState = SingleGunnerState.Attack;
             else currentState = SingleGunnerState.Chase;
             return;
@@ -241,7 +257,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
         }
     }
 
-    // --- ACTIONS ---
+  
 
     private void AimAndShoot()
     {
@@ -278,6 +294,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void RequestRandomPath()
     {
+        if (pathfindingManager == null) return;
         isWaitingForPath = true;
         Vector3 randomSpot = transform.position + new Vector3(Random.Range(-patrolRadius, patrolRadius), 0, Random.Range(-patrolRadius, patrolRadius));
         pathfindingManager.FindPath(transform.position, randomSpot, this);
@@ -286,12 +303,14 @@ public class SingleGunner : MonoBehaviour, IDamageable
     // --- NEW HELPER ---
     void RequestPathToPlayer()
     {
+        if (pathfindingManager == null) return;
         isWaitingForPath = true;
         pathfindingManager.FindPath(transform.position, player.position, this);
     }
 
     void RequestRetreatPath()
     {
+        if (pathfindingManager == null) return;
         isWaitingForPath = true;
         Vector3 dir = (transform.position - player.position).normalized;
         Vector3 retreatSpot = transform.position + (dir * 10f);
@@ -386,6 +405,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
             State.text = "STATE: " + currentState.ToString();
             HP.text = "HP: " + currentHealth.ToString("F0") + "/" + maxHealth.ToString("F0");
             HP.color = (currentHealth <= maxHealth * 0.3f) ? Color.red : Color.green;
+            
 
             if (Camera.main != null)
             {
