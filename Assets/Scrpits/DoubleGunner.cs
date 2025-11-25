@@ -127,7 +127,7 @@ public class DoubleGunner : MonoBehaviour, IDamageable
     {
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
 
-        // Transition to Chase
+        
         if (distanceToPlayer <= engagementRange)
         {
             currentState = GunnerState.Chase;
@@ -138,7 +138,7 @@ public class DoubleGunner : MonoBehaviour, IDamageable
         if (meshRenderer) meshRenderer.material = PatrolMaterial;
         State.color = (PatrolMaterial != null) ? PatrolMaterial.color : Color.blue;
 
-        // Check if we reached the destination
+        
         if (!navAgent.pathPending && navAgent.remainingDistance <= navAgent.stoppingDistance)
         {
             waitTimer += Time.deltaTime;

@@ -346,7 +346,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14b5d84104505db468b491a71e424939, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 3297872260368106890, guid: 4db6868d13e54664dbfe451f9617aa9d, type: 3}
+  player: {fileID: 0}
   offset: {x: 0, y: 0, z: 0}
 --- !u!114 &534724459
 MonoBehaviour:
@@ -514,7 +514,7 @@ MonoBehaviour:
     type: 3}
   gunnerBotPrefab: {fileID: 3241154927606557213, guid: c79197ea85d6be848b90690d01f7b367,
     type: 3}
-  enemyCount: 3
+  enemyCount: 10
 --- !u!4 &1665240308
 Transform:
   m_ObjectHideFlags: 0

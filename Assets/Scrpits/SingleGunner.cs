@@ -103,7 +103,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
     void Update()
     {
-        if (player == null) return; // Don't do anything if player is dead/missing
+        if (player == null) return; 
 
         SwitchState();
         UpdateUI();
@@ -142,17 +142,16 @@ public class SingleGunner : MonoBehaviour, IDamageable
         if (meshRenderer) meshRenderer.material = PatrolMaterial;
         State.color = (PatrolMaterial != null) ? PatrolMaterial.color : Color.blue;
 
-        // Transition Logic:
         if (distToPlayer < visionRange)
         {
-            // If we see the player, decide: Attack or Chase?
+            
             if (distToPlayer <= attackRange)
             {
                 currentState = SingleGunnerState.Attack;
             }
             else
             {
-                currentState = SingleGunnerState.Chase; // Target seen, but too far to shoot
+                currentState = SingleGunnerState.Chase; 
             }
             return;
         }
@@ -163,34 +162,28 @@ public class SingleGunner : MonoBehaviour, IDamageable
         }
     }
 
-    // --- NEW METHOD: CHASE ---
+  
     private void Chase()
     {
         float distToPlayer = Vector3.Distance(transform.position, player.position);
         if (meshRenderer) meshRenderer.material = ChaseMaterial;
         State.color = (ChaseMaterial != null) ? ChaseMaterial.color : Color.blue;
 
-        // 1. Transition: Close enough to kill?
         if (distToPlayer <= attackRange)
         {
-            StopMoving(); // Stop running so we can shoot
+            StopMoving(); 
             currentState = SingleGunnerState.Attack;
             return;
         }
-
-        // 2. Transition: Player escaped vision?
         if (distToPlayer > visionRange)
         {
             searchTimer = Time.time + searchDuration;
             currentState = SingleGunnerState.Search;
             return;
         }
-
-        // 3. Logic: Run towards the player
-        // We constantly check if we need a new path to the player
         if (Time.time > repathTimer && !isWaitingForPath)
         {
-            repathTimer = Time.time + repathRate; // Reset timer
+            repathTimer = Time.time + repathRate;
             RequestPathToPlayer();
         }
     }
@@ -204,14 +197,12 @@ public class SingleGunner : MonoBehaviour, IDamageable
         if (isMoving) StopMoving();
         AimAndShoot();
 
-        // Transition: Player ran out of "Attack Zone" but is still visible
         if (distToPlayer > attackRange && distToPlayer < visionRange)
         {
-            currentState = SingleGunnerState.Chase; // Start running after him!
+            currentState = SingleGunnerState.Chase; 
             return;
         }
 
-        // Transition: Player ran completely away
         if (distToPlayer > visionRange)
         {
             searchTimer = Time.time + searchDuration;
@@ -219,6 +210,8 @@ public class SingleGunner : MonoBehaviour, IDamageable
             return;
         }
     }
+
+
 
     private void Reposition()
     {
@@ -233,18 +226,11 @@ public class SingleGunner : MonoBehaviour, IDamageable
             RequestRetreatPath();
         }
 
-        
-       
-        if (distToPlayer > attackRange)
+        // Exit Condition: Safety reached
+        if (distToPlayer > tooCloseRange * 2.0f)
         {
             StopMoving();
             currentState = SingleGunnerState.Attack;
-        }
-
-      
-        if (distToPlayer < visionRange)
-        {
-            currentState = SingleGunnerState.Patrol;
         }
     }
 
@@ -260,7 +246,6 @@ public class SingleGunner : MonoBehaviour, IDamageable
 
         if (distToPlayer < visionRange)
         {
-            // Found him! Determine range again.
             if (distToPlayer <= attackRange) currentState = SingleGunnerState.Attack;
             else currentState = SingleGunnerState.Chase;
             return;
@@ -272,7 +257,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
         }
     }
 
-    // --- ACTIONS ---
+  
 
     private void AimAndShoot()
     {
