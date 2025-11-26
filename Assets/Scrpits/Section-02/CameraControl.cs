@@ -3,7 +3,7 @@ using UnityEngine;
 public class CameraControl : MonoBehaviour
 {
     [Header("Target")]
-    public Transform target;          // The Player
+    private Transform target;          // The Player
 
     [Header("Distances")]
     public float distance = 10.0f;    // Normal distance
@@ -49,7 +49,16 @@ public class CameraControl : MonoBehaviour
 
     void LateUpdate()
     {
-        if (target == null) return;
+        if (target == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                target = player.transform;
+
+            }
+            return;
+        }
 
         // 1. Input Handling
         yaw += Input.GetAxis("Mouse X") * mouseSensitivity;

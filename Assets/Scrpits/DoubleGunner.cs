@@ -94,7 +94,18 @@ public class DoubleGunner : MonoBehaviour, IDamageable
 
     void Update()
     {
-        if (playerTransform == null) return;
+        if (playerTransform == null)
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null)
+            {
+                playerTransform = p.transform;
+            }
+            else
+            {
+                return;
+            }
+        }
 
         SwitchState();
         HandleTerrainSpeed();
