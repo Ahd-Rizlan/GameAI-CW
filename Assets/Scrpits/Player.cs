@@ -17,6 +17,11 @@ public class Player : MonoBehaviour, IDamageable
     [SerializeField] public float fireCooldown = 0.3f;
     [SerializeField] float nextFire = 0f;
 
+    [SerializeField] public float bulletSpeed = 20f;
+    [SerializeField] public float bullet_Min_Damage = 10f;
+    [SerializeField] public float bullet_Max_Damage = 20f;
+
+
     [Header("UI Elements")]
     [SerializeField] public TMP_Text HP;
 
@@ -84,12 +89,26 @@ public class Player : MonoBehaviour, IDamageable
 
     void Shoot()
     {
+       
+
+        if (bulletSpawn == null)return;
+
         GameObject bullet = Instantiate(bulletPrefab, bulletSpawn.position, bulletSpawn.rotation);
-        Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
-        if (bulletRb)
+        Bullet script = bullet.GetComponent<Bullet>();
+
+        if (script != null)
         {
-            bulletRb.velocity = transform.forward * bullet.GetComponent<Bullet>().Speed;
+            script.minDamage = bullet_Min_Damage;
+            script.maxDamage = bullet_Max_Damage;
+            script.Speed = bulletSpeed;
+            script.owner = this.gameObject;
         }
+
+
+        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+
+        rb.velocity = bulletSpawn.forward * (script ? script.Speed : 10f);
+
     }
 
     public void TakeDamage(float Damage)
