@@ -24,10 +24,10 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [SerializeField] private TMP_Text HP;
 
     [Header("References")]
-    [SerializeField] private Transform player; // Will be auto-assigned
+     private Transform player; // Will be auto-assigned
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private Pathfinding pathfindingManager; // Will be auto-assigned
+    private Pathfinding pathfindingManager; // Will be auto-assigned
     [SerializeField] private MeshRenderer meshRenderer;
 
     [Header("Health")]

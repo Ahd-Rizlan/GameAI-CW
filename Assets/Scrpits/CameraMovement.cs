@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
-    public Transform player;
+    private Transform player;
 
     // This sets the default, but Inspector overrides it
     public Vector3 offset = new Vector3(0, 15, -10);

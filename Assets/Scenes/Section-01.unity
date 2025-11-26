@@ -346,7 +346,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14b5d84104505db468b491a71e424939, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 3297872260368106890, guid: 4db6868d13e54664dbfe451f9617aa9d, type: 3}
+  player: {fileID: 0}
   offset: {x: 0, y: 0, z: 0}
 --- !u!114 &534724459
 MonoBehaviour:
@@ -405,6 +405,7 @@ GameObject:
   - component: {fileID: 1665240306}
   - component: {fileID: 1665240305}
   - component: {fileID: 1665240304}
+  - component: {fileID: 1665240309}
   m_Layer: 0
   m_Name: Game Controller
   m_TagString: Untagged
@@ -498,16 +499,23 @@ MonoBehaviour:
   waterPatchSize: 30
   sandPatches: 8
   sandPatchSize: 20
-  wallPrefab: {fileID: 0}
-  floorPrefab: {fileID: 0}
-  sandPrefab: {fileID: 0}
-  waterPrefab: {fileID: 0}
-  navMeshSurface: {fileID: 0}
-  customGrid: {fileID: 0}
-  playerPrefab: {fileID: 0}
-  sniperBotPrefab: {fileID: 0}
-  gunnerBotPrefab: {fileID: 0}
-  enemyCount: 3
+  wallPrefab: {fileID: 1036574555561201477, guid: d8b94b79cbd161f43be19fc6ccd2ff81,
+    type: 3}
+  floorPrefab: {fileID: 5676710505619537974, guid: 7ad5e3c6a74f9c84db3a7e74e7e6f328,
+    type: 3}
+  sandPrefab: {fileID: 2041457232099749857, guid: 59516e8ecddc7984681e171d9e653a59,
+    type: 3}
+  waterPrefab: {fileID: 6065626096250673260, guid: 111a8aba78761a14f8d4d882866976a1,
+    type: 3}
+  navMeshSurface: {fileID: 1665240304}
+  customGrid: {fileID: 1665240306}
+  playerPrefab: {fileID: 7415947786894932450, guid: 4db6868d13e54664dbfe451f9617aa9d,
+    type: 3}
+  sniperBotPrefab: {fileID: 3006946234163074896, guid: 2e230c84dbb907047ab1a69f5677a9bf,
+    type: 3}
+  gunnerBotPrefab: {fileID: 3241154927606557213, guid: c79197ea85d6be848b90690d01f7b367,
+    type: 3}
+  enemyCount: 2
 --- !u!4 &1665240308
 Transform:
   m_ObjectHideFlags: 0
@@ -523,6 +531,30 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1665240309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1665240303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c97b96bff58dc8b4e85ba912ec850a6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rayLength: 2
+  terrainTypes:
+  - name: Mud
+    layer:
+      serializedVersion: 2
+      m_Bits: 512
+    speedMultiplier: 0.5
+  - name: Water
+    layer:
+      serializedVersion: 2
+      m_Bits: 16
+    speedMultiplier: 0.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

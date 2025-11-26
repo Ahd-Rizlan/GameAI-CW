@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8868859233773149193}
   - component: {fileID: 2967482302709384308}
   - component: {fileID: 5559760930390453539}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: State
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -146,7 +146,7 @@ GameObject:
   - component: {fileID: 3385275389810228286}
   - component: {fileID: 6718333057517061757}
   - component: {fileID: 7620931328824893152}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: Gun
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -254,7 +254,7 @@ GameObject:
   - component: {fileID: 1892953872028716686}
   - component: {fileID: 7599833047722320824}
   - component: {fileID: 2002096579236610418}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: Face
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -359,7 +359,7 @@ GameObject:
   - component: {fileID: 2993268448648674679}
   - component: {fileID: 8726666822358778390}
   - component: {fileID: 5430744944615751897}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: ID
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -496,7 +496,7 @@ GameObject:
   - component: {fileID: 2487362248068392815}
   - component: {fileID: -1374304941655035619}
   - component: {fileID: 3599088036494299365}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: Enemy - Single Gunner
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -631,7 +631,7 @@ MonoBehaviour:
   AttackMaterial: {fileID: 2100000, guid: e65c1c311aec18c49967e4462c9c1aff, type: 2}
   RetreatMaterial: {fileID: 2100000, guid: b7c6367c77b1f894b9656d25be123942, type: 2}
   SearchMaterial: {fileID: 2100000, guid: c8b6b09a2d529ce4a9f90808ab89698e, type: 2}
-  searchDuration: 2
+  searchDuration: 5
 --- !u!114 &3599088036494299365
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -645,7 +645,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rayLength: 2
-  terrainTypes: []
+  terrainTypes:
+  - name: mud
+    layer:
+      serializedVersion: 2
+      m_Bits: 512
+    speedMultiplier: 0.6
+  - name: water
+    layer:
+      serializedVersion: 2
+      m_Bits: 512
+    speedMultiplier: 0.5
 --- !u!1 &3143765305533641684
 GameObject:
   m_ObjectHideFlags: 0
@@ -657,7 +667,7 @@ GameObject:
   - component: {fileID: 5277628100928995755}
   - component: {fileID: 1791699527358250214}
   - component: {fileID: 1603791221215913892}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: HP
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -792,7 +802,7 @@ GameObject:
   - component: {fileID: 426907399046792735}
   - component: {fileID: 2354167073134094426}
   - component: {fileID: 641806731209298862}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -893,7 +903,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6135703661841417826}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: Bullet Generator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -927,7 +937,7 @@ GameObject:
   - component: {fileID: 2093337383363294143}
   - component: {fileID: 1456419224544525212}
   - component: {fileID: 1028110068613687573}
-  m_Layer: 3
+  m_Layer: 6
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}

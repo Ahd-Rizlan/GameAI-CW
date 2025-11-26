@@ -25,7 +25,7 @@ public class DoubleGunner : MonoBehaviour, IDamageable
     [Header("References")]
     [SerializeField] private NavMeshAgent navAgent;
     [SerializeField] private MeshRenderer meshRenderer;
-    [SerializeField] private Transform playerTransform;
+     private Transform playerTransform;
     [SerializeField] private Transform Gun_01;
     [SerializeField] private Transform Gun_02;
     [SerializeField] private GameObject Bullet;
@@ -35,8 +35,8 @@ public class DoubleGunner : MonoBehaviour, IDamageable
     [SerializeField] private float currentHealth;
 
     [Header("Patrol Settings")]
-    [SerializeField] private float patrolRadius = 20f; // Range to find random points
-    [SerializeField] private float patrolWaitTime = 1f; // How long to wait at each point
+    [SerializeField] private float patrolRadius = 20f; 
+    [SerializeField] private float patrolWaitTime = 1f; 
     private float waitTimer = 0f;
 
     [Header("Attack Settings")]
