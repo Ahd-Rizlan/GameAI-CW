@@ -77,7 +77,6 @@ public class Player : MonoBehaviour, IDamageable
 
     void FixedUpdate()
     {
-        // 5. Apply Physics Movement in FixedUpdate to prevent "Sliding" or "Ghosting"
         float speedMultiplier = 1f;
         if (scanner != null) speedMultiplier = scanner.GetSpeedMultiplier();
 
