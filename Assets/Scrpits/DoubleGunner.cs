@@ -187,7 +187,7 @@ public class DoubleGunner : MonoBehaviour, IDamageable
 
     private void Attack()
     {
-        navAgent.ResetPath(); // Stop moving to shoot
+        navAgent.ResetPath(); 
         if (meshRenderer) meshRenderer.material = AttackMaterial;
         State.color = (AttackMaterial != null) ? AttackMaterial.color : Color.red;
 
