@@ -43,10 +43,10 @@ public class ObjectSpawner : MonoBehaviour
 
         SpawnPlayer();
 
-        // Pass the hover height for Artefacts
+      
         SpawnGroup(artefactPrefabs, artefactCount, "Artefact", artefactHoverHeight);
 
-        // Pass 0 for Enemies (grounded)
+       
         SpawnGroup(enemyPrefabs, enemyCount, "Enemy", 0f);
     }
 
@@ -81,7 +81,7 @@ public class ObjectSpawner : MonoBehaviour
         Debug.LogError("Could not find a valid spawn point for Player!");
     }
 
-    // UPDATED: Now accepts 'heightOffset'
+    
     void SpawnGroup(GameObject[] prefabs, int count, string groupName, float heightOffset)
     {
         if (prefabs == null || prefabs.Length == 0) return;
@@ -100,7 +100,7 @@ public class ObjectSpawner : MonoBehaviour
                 {
                     GameObject obj = Instantiate(prefabToSpawn, validPos, Quaternion.identity);
 
-                    // --- APPLY HEIGHT OFFSET HERE ---
+                    
                     obj.transform.position += Vector3.up * heightOffset;
 
                     obj.transform.parent = spawnContainer;

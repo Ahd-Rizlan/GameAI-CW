@@ -59,7 +59,6 @@ public class TerrainGenerator : MonoBehaviour
         GenerateTerrain();
     }
 
-#if UNITY_EDITOR 
     void OnValidate()
     {
         if (Width < 1) Width = 1;
@@ -67,28 +66,9 @@ public class TerrainGenerator : MonoBehaviour
         if (Lacunarity < 1) Lacunarity = 1;
         if (Octaves < 0) Octaves = 0;
 
-        //if (AutoUpdate)
-        //{
-        //    UnityEditor.EditorApplication.delayCall += () =>
-        //    {
-        //        if (this == null) return;
-
-        //        if (mesh == null)
-        //        {
-        //            MeshFilter filter = GetComponent<MeshFilter>();
-        //            if (filter != null)
-        //            {
-        //                if (filter.sharedMesh != null) mesh = filter.sharedMesh;
-        //                else mesh = new Mesh();
-        //                filter.mesh = mesh;
-        //            }
-        //        }
-
-        //        if (mesh != null) GenerateTerrain();
-        //    };
-        //}
+   
     }
-#endif
+
 
     public void GenerateTerrain()
     {

@@ -49,12 +49,12 @@ public class Player : MonoBehaviour, IDamageable
 
     void Update()
     {
-        // 1. Gather Input in Update
+       
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
         moveInput = new Vector3(h, 0, v).normalized;
 
-        // 2. Rotate to face movement direction
+        
         if (moveInput != Vector3.zero)
         {
             transform.forward = moveInput;
@@ -82,7 +82,6 @@ public class Player : MonoBehaviour, IDamageable
 
         Vector3 targetVelocity = moveInput * (speed * speedMultiplier);
 
-        // Apply velocity to Rigidbody (keeps Y velocity for gravity)
         rb.velocity = new Vector3(targetVelocity.x, rb.velocity.y, targetVelocity.z);
     }
 

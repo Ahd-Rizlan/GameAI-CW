@@ -32,12 +32,11 @@ public class Grid : MonoBehaviour
                 penaltyColors.Add(region.terrainPenalty, region.regionColor);
             }
         }
-        // REMOVED: CreateGrid(); -> We don't run this automatically anymore!
+
     }
 
     public int MaxSize => gridSizeX * gridSizeY;
 
-    // CHANGED: Made 'public' so ArenaGenerator can call it
     public void CreateGrid()
     {
         grid = new Node[gridSizeX, gridSizeY];

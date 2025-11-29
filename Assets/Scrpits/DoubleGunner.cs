@@ -87,7 +87,7 @@ public class DoubleGunner : MonoBehaviour, IDamageable
         navAgent = GetComponent<NavMeshAgent>();
         navAgent.speed = normalSpeed;
 
-        // Start patrolling immediately
+    
         SetRandomPatrolDestination();
         UpdateUI();
     }
@@ -167,7 +167,7 @@ public class DoubleGunner : MonoBehaviour, IDamageable
         randomDirection += transform.position;
         NavMeshHit hit;
 
-        // Find a valid point on the NavMesh
+        
         if (NavMesh.SamplePosition(randomDirection, out hit, patrolRadius, 1))
         {
             navAgent.SetDestination(hit.position);

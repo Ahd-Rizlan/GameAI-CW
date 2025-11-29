@@ -24,7 +24,7 @@ public class Pathfinding : MonoBehaviour
         Node startNode = grid.NodeFromWorldPoint(startPos);
         Node targetNode = grid.NodeFromWorldPoint(targetPos);
 
-        // Basic check: Start and End nodes must be walkable
+        
         if (startNode.walkable && targetNode.walkable)
         {
             // BFS uses a Queue (First In, First Out)
@@ -40,7 +40,7 @@ public class Pathfinding : MonoBehaviour
             {
                 Node currentNode = queue.Dequeue();
 
-                // Found the target?
+                
                 if (currentNode == targetNode)
                 {
                     pathSuccess = true;
@@ -49,19 +49,19 @@ public class Pathfinding : MonoBehaviour
 
                 foreach (Node neighbour in grid.GetNeighbours(currentNode))
                 {
-                    // If unwalkable or already visited, skip
+                    
                     if (!neighbour.walkable || visited.Contains(neighbour))
                     {
                         continue;
                     }
 
-                    // Mark as visited immediately
+                    
                     visited.Add(neighbour);
 
-                    // Set parent so we can retrace the path later
+                    
                     neighbour.parent = currentNode;
 
-                    // Add to queue to explore its neighbors next
+                   
                     queue.Enqueue(neighbour);
                 }
             }
@@ -72,7 +72,7 @@ public class Pathfinding : MonoBehaviour
             waypoints = RetracePath(startNode, targetNode);
         }
 
-        // Return results to the SingleGunner
+        
         requestor.OnPathFound(waypoints, pathSuccess);
         yield return null;
     }
