@@ -93,6 +93,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8241640588629505232}
   - component: {fileID: 5142660098364858306}
+  - component: {fileID: 9047742247507761257}
   m_Layer: 0
   m_Name: Health
   m_TagString: Untagged
@@ -132,12 +133,24 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &9047742247507761257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3154366989594575586}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 302171d06ead343458beb25954354687, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &9039794583566619700
 GameObject:
   m_ObjectHideFlags: 0

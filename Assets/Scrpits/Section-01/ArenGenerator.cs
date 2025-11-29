@@ -40,7 +40,7 @@ public class ArenaGenerator : MonoBehaviour
     public GameObject sandPrefab;
     public GameObject waterPrefab;
     public NavMeshSurface navMeshSurface;
-    public Grid customGrid; // <--- ASSIGN YOUR GRID OBJECT HERE IN INSPECTOR
+    public Grid customGrid; 
 
     [Header("Entity Spawning")]
     public GameObject playerPrefab;
@@ -111,16 +111,14 @@ public class ArenaGenerator : MonoBehaviour
             SmoothMap();
         }
 
-        // 3. FORCE CONNECTIVITY
         ProcessMap();
 
-        // 4. Apply Terrain details
+       
         ApplyTerrainClusters();
 
-        // 5. Build Visuals
         BuildMesh();
 
-        // 6. Finalize
+        
         if (Application.isPlaying)
         {
             StopAllCoroutines();
@@ -133,30 +131,26 @@ public class ArenaGenerator : MonoBehaviour
 
     IEnumerator BuildLevelSequence()
     {
-        // Wait for visual meshes to spawn
+       
         yield return new WaitForEndOfFrame();
 
-        // A. Update the Custom Grid (For Single Gunner)
         if (customGrid != null)
         {
             customGrid.CreateGrid();
         }
 
-        // B. Update NavMesh (For Double Gunner)
         if (navMeshSurface != null)
         {
             navMeshSurface.collectObjects = CollectObjects.Children;
             navMeshSurface.BuildNavMesh();
         }
 
-        // Wait one frame for the NavMesh/Grid to register
         yield return null;
 
-        // C. Spawn Entities on valid ground
         SpawnEntities();
     }
 
-    // --- CELLULAR AUTOMATA LOGIC ---
+  
 
     void RandomFillMap()
     {
@@ -210,7 +204,6 @@ public class ArenaGenerator : MonoBehaviour
         return wallCount;
     }
 
-    // --- CONNECTIVITY LOGIC ---
 
     void ProcessMap()
     {
@@ -557,7 +550,7 @@ public class ArenaGenerator : MonoBehaviour
     }
 }
 
-// --- HELPER CLASS FOR CONNECTIVITY ---
+
 public class Room : IComparable<Room>
 {
     public List<Vector2Int> tiles;

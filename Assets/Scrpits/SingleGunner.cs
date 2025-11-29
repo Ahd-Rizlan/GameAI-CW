@@ -24,10 +24,10 @@ public class SingleGunner : MonoBehaviour, IDamageable
     [SerializeField] private TMP_Text HP;
 
     [Header("References")]
-    [SerializeField] private Transform player; // Will be auto-assigned
+     private Transform player; // Will be auto-assigned
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private Pathfinding pathfindingManager; // Will be auto-assigned
+    private Pathfinding pathfindingManager; // Will be auto-assigned
     [SerializeField] private MeshRenderer meshRenderer;
 
     [Header("Health")]
@@ -290,7 +290,6 @@ public class SingleGunner : MonoBehaviour, IDamageable
         }
     }
 
-    // --- PATHFINDING HELPERS ---
 
     void RequestRandomPath()
     {
@@ -300,7 +299,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
         pathfindingManager.FindPath(transform.position, randomSpot, this);
     }
 
-    // --- NEW HELPER ---
+ 
     void RequestPathToPlayer()
     {
         if (pathfindingManager == null) return;
@@ -328,7 +327,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         isWaitingForPath = false;
 
-        // If we switched to Attack mode while waiting, ignore movement
+       
         if (currentState == SingleGunnerState.Attack) return;
 
         if (pathSuccessful)
@@ -379,7 +378,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
     {
         currentHealth -= amount;
 
-        // Defensive Reaction
+     
         if (currentState != SingleGunnerState.Reposition)
         {
             currentState = SingleGunnerState.Reposition;
@@ -435,7 +434,7 @@ public class SingleGunner : MonoBehaviour, IDamageable
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRange);
 
-        // Draw the new Attack Range
+        
         Gizmos.color = Color.magenta;
         Gizmos.DrawWireSphere(transform.position, attackRange);
 

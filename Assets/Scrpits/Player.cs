@@ -17,6 +17,11 @@ public class Player : MonoBehaviour, IDamageable
     [SerializeField] public float fireCooldown = 0.3f;
     [SerializeField] float nextFire = 0f;
 
+    [SerializeField] public float bulletSpeed = 20f;
+    [SerializeField] public float bullet_Min_Damage = 10f;
+    [SerializeField] public float bullet_Max_Damage = 20f;
+
+
     [Header("UI Elements")]
     [SerializeField] public TMP_Text HP;
 
@@ -44,12 +49,12 @@ public class Player : MonoBehaviour, IDamageable
 
     void Update()
     {
-        // 1. Gather Input in Update
+       
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
         moveInput = new Vector3(h, 0, v).normalized;
 
-        // 2. Rotate to face movement direction
+        
         if (moveInput != Vector3.zero)
         {
             transform.forward = moveInput;
@@ -72,24 +77,36 @@ public class Player : MonoBehaviour, IDamageable
 
     void FixedUpdate()
     {
-        // 5. Apply Physics Movement in FixedUpdate to prevent "Sliding" or "Ghosting"
         float speedMultiplier = 1f;
         if (scanner != null) speedMultiplier = scanner.GetSpeedMultiplier();
 
         Vector3 targetVelocity = moveInput * (speed * speedMultiplier);
 
-        // Apply velocity to Rigidbody (keeps Y velocity for gravity)
         rb.velocity = new Vector3(targetVelocity.x, rb.velocity.y, targetVelocity.z);
     }
 
     void Shoot()
     {
+       
+
+        if (bulletSpawn == null)return;
+
         GameObject bullet = Instantiate(bulletPrefab, bulletSpawn.position, bulletSpawn.rotation);
-        Rigidbody bulletRb = bullet.GetComponent<Rigidbody>();
-        if (bulletRb)
+        Bullet script = bullet.GetComponent<Bullet>();
+
+        if (script != null)
         {
-            bulletRb.velocity = transform.forward * bullet.GetComponent<Bullet>().Speed;
+            script.minDamage = bullet_Min_Damage;
+            script.maxDamage = bullet_Max_Damage;
+            script.Speed = bulletSpeed;
+            script.owner = this.gameObject;
         }
+
+
+        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+
+        rb.velocity = bulletSpawn.forward * (script ? script.Speed : 10f);
+
     }
 
     public void TakeDamage(float Damage)

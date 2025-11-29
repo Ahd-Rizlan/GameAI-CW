@@ -1,13 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class TerrainGenerator : MonoBehaviour
 {
     [Header("Terrain Generation Settings")]
-   
     [Range(50, 250)]
     public int Width = 50;
     [Range(50, 250)]
@@ -26,16 +26,15 @@ public class TerrainGenerator : MonoBehaviour
     public float Lacunarity = 2f;
 
     [Header("Advanced: Voronoi Noise")]
-    // Requirement: Layering multiple noise functions / Voronoi 
     public bool UseVoronoi = false;
     public float VoronoiScale = 5f;
     [Range(0, 1)]
-    public float VoronoiBlend = 0.3f; // How much Voronoi affects the terrain
+    public float VoronoiBlend = 0.3f;
 
     [Header("Height Settings")]
     public float HeightMultiplier = 5f;
-    public AnimationCurve HeightCurve; // Replaces simple Threshold for better control
-    public Gradient Gradient; // For coloring based on height
+    public AnimationCurve HeightCurve;
+    public Gradient Gradient;
 
     [Header("Visualization")]
     public bool AutoUpdate = true;
@@ -52,6 +51,7 @@ public class TerrainGenerator : MonoBehaviour
 
     void Start()
     {
+        Seed = UnityEngine.Random.Range(-10000, 10000);
         mesh = new Mesh();
         mesh.name = "Procedural Terrain";
         GetComponent<MeshFilter>().mesh = mesh;
@@ -59,9 +59,6 @@ public class TerrainGenerator : MonoBehaviour
         GenerateTerrain();
     }
 
-
-    // This runs when you change values in the Inspector
-#if UNITY_EDITOR // <--- This line tells Unity: "Only read this in the Editor"
     void OnValidate()
     {
         if (Width < 1) Width = 1;
@@ -69,34 +66,15 @@ public class TerrainGenerator : MonoBehaviour
         if (Lacunarity < 1) Lacunarity = 1;
         if (Octaves < 0) Octaves = 0;
 
-        if (AutoUpdate)
-        {
-            // This code will now be IGNORED when building the game, fixing the error
-            UnityEditor.EditorApplication.delayCall += () =>
-            {
-                if (this == null) return;
-
-                // Safety check to recover the mesh if lost
-                if (mesh == null)
-                {
-                    MeshFilter filter = GetComponent<MeshFilter>();
-                    if (filter != null)
-                    {
-                        if (filter.sharedMesh != null) mesh = filter.sharedMesh;
-                        else mesh = new Mesh();
-                        filter.mesh = mesh;
-                    }
-                }
-
-                if (mesh != null) GenerateTerrain();
-            };
-        }
+   
     }
-#endif // <--- Don't forget this closing line!
 
 
     public void GenerateTerrain()
     {
+        System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+
+        stopwatch.Start();
         if (mesh == null)
         {
             mesh = new Mesh();
@@ -106,10 +84,13 @@ public class TerrainGenerator : MonoBehaviour
         CreateMesh();
         UpdateMesh();
 
-        if (GetComponent< ObjectSpawner >() != null)
+        if (Application.isPlaying && GetComponent<ObjectSpawner>() != null)
         {
-            GetComponent< ObjectSpawner >().SpawnObjects();
+            GetComponent<ObjectSpawner>().SpawnObjects();
         }
+        stopwatch.Stop();
+        UnityEngine.Debug.Log($"Generation Time: {stopwatch.ElapsedMilliseconds} ms");
+
     }
 
     void CreateMesh()
@@ -117,35 +98,25 @@ public class TerrainGenerator : MonoBehaviour
         vertices = new Vector3[(Width + 1) * (Depth + 1)];
         uvs = new Vector2[vertices.Length];
         triangles = new int[Width * Depth * 6];
-        colors = new Color[vertices.Length]; // Initialize colors array
+        colors = new Color[vertices.Length];
 
-        // noise map (Perlin + Voronoi)
-        // This map is already strictly 0.0 to 1.0
         float[] heightMap = GenerateNoiseMap();
 
-        // 1. Generate Vertices, UVs, and Colors
         for (int i = 0, z = 0; z <= Depth; z++)
         {
             for (int x = 0; x <= Width; x++)
             {
-                // Get the normalized height (0 to 1)
                 float heightPercent = heightMap[i];
-
-                // Calculate actual world Y position
                 float y = HeightCurve.Evaluate(heightPercent) * HeightMultiplier;
 
                 vertices[i] = new Vector3(x, y, z);
                 uvs[i] = new Vector2((float)x / Width, (float)z / Depth);
-
-                
-                // 0 = Lowest point (Water), 1 = Highest point (Mountain Peak)
                 colors[i] = Gradient.Evaluate(heightPercent);
 
                 i++;
             }
         }
 
-        // 2. Generate Triangles (Standard Grid Logic)
         int vert = 0;
         int tris = 0;
         for (int z = 0; z < Depth; z++)
@@ -202,7 +173,6 @@ public class TerrainGenerator : MonoBehaviour
                 float frequency = 1;
                 float noiseHeight = 0;
 
-                // --- Perlin Noise Layer ---
                 for (int o = 0; o < Octaves; o++)
                 {
                     float sampleX = (x - halfWidth) / NoiseScale * frequency + octaveOffsets[o].x;
@@ -215,18 +185,11 @@ public class TerrainGenerator : MonoBehaviour
                     frequency *= Lacunarity;
                 }
 
-                // --- Voronoi Noise Layer (Advanced) ---
                 if (UseVoronoi)
                 {
-                    // Normalize coordinates for Voronoi
                     float vX = (float)x / Width;
                     float vZ = (float)z / Depth;
-
                     float voronoiValue = GetVoronoi(vX, vZ, VoronoiScale);
-
-                    // Blend logic: Lerp towards the voronoi shape based on blend factor
-                    // Note: noiseHeight from perlin is roughly -1 to 1. Voronoi is 0 to 1.
-                    // We multiply voronoi by 2-1 to match ranges roughly if needed, or just overlay.
                     float voronoiAdjusted = (voronoiValue * 2) - 1;
                     noiseHeight = Mathf.Lerp(noiseHeight, voronoiAdjusted, VoronoiBlend);
                 }
@@ -239,7 +202,6 @@ public class TerrainGenerator : MonoBehaviour
             }
         }
 
-        // Normalize the map to 0-1
         for (int i = 0; i < noiseMap.Length; i++)
         {
             noiseMap[i] = Mathf.InverseLerp(minNoiseHeight, maxNoiseHeight, noiseMap[i]);
@@ -248,7 +210,6 @@ public class TerrainGenerator : MonoBehaviour
         return noiseMap;
     }
 
-    // --- Voronoi Helper Functions ---
     float GetVoronoi(float x, float z, float scale)
     {
         x *= scale;
@@ -257,7 +218,6 @@ public class TerrainGenerator : MonoBehaviour
         int iZ = Mathf.FloorToInt(z);
         float minDistance = 1.0f;
 
-        // Check 3x3 neighbor grid
         for (int yOffset = -1; yOffset <= 1; yOffset++)
         {
             for (int xOffset = -1; xOffset <= 1; xOffset++)
@@ -271,7 +231,7 @@ public class TerrainGenerator : MonoBehaviour
                 if (distance < minDistance) minDistance = distance;
             }
         }
-        return 1.0f - minDistance; // Invert so center is high
+        return 1.0f - minDistance;
     }
 
     Vector2 GetRandomPointInCell(int x, int z)
@@ -280,10 +240,8 @@ public class TerrainGenerator : MonoBehaviour
         return new Vector2((float)prng.NextDouble(), (float)prng.NextDouble());
     }
 
-    // --- Public Helper for Object Spawner ---
     public float GetTerrainHeight(int x, int z)
     {
-        // Clamp to ensure we don't go out of bounds
         x = Mathf.Clamp(x, 0, Width);
         z = Mathf.Clamp(z, 0, Depth);
 
@@ -295,7 +253,6 @@ public class TerrainGenerator : MonoBehaviour
         return 0;
     }
 
-    // Optional visualization using Gizmos (Better performance than instantiating objects)
     private void OnDrawGizmos()
     {
         if (VisualizeVertices && vertices != null)

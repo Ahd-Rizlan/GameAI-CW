@@ -9,113 +9,164 @@ public class ObjectSpawner : MonoBehaviour
     [Header("References")]
     public TerrainGenerator terrainGenerator;
     public NavMeshSurface navMeshSurface;
-    public Transform playerTransform;
+
+    private Transform currentPlayerTransform;
+    private Transform spawnContainer;
+
+    [Header("Player Settings")]
+    public GameObject playerPrefab;
 
     [Header("Artefact Settings")]
     public GameObject[] artefactPrefabs;
-    public int amountPerType = 3; 
+    public int artefactCount = 3;
+    [Tooltip("How high the artefacts float above the ground")]
+    public float artefactHoverHeight = 1.5f; 
+
+    [Header("Enemy Settings")]
+    public GameObject[] enemyPrefabs;
+    public int enemyCount = 5;
 
     [Header("Spawn Restrictions")]
-    [Tooltip("Any terrain lower than this is considered Deep Water")]
     public float minSpawnHeight = 2.0f;
-
-    [Tooltip("Any terrain higher than this is considered Mountain Peak")]
     public float maxSpawnHeight = 15.0f;
+    [Range(0f, 60f)]
+    public float maxSlopeAngle = 30f;
 
     [Header("Visualization")]
-    public bool showPathLines = true; 
+    public bool showPathLines = true;
     public LineRenderer lineRendererPrefab;
 
     public void SpawnObjects()
     {
-        // 1. Bake the NavMesh on the newly generated terrain
+        CleanupOldObjects();
         navMeshSurface.BuildNavMesh();
 
-        // 2. Loop through each artefact type
-        foreach (GameObject prefab in artefactPrefabs)
+        SpawnPlayer();
+
+      
+        SpawnGroup(artefactPrefabs, artefactCount, "Artefact", artefactHoverHeight);
+
+       
+        SpawnGroup(enemyPrefabs, enemyCount, "Enemy", 0f);
+    }
+
+    void CleanupOldObjects()
+    {
+        if (spawnContainer != null) Destroy(spawnContainer.gameObject);
+        else
         {
-            int spawnedCount = 0;
-            int attempts = 0;
+            GameObject old = GameObject.Find("--- Spawned Objects Container ---");
+            if (old != null) Destroy(old);
+        }
 
-            // Try 100 times to find a valid spot for this object
-            while (spawnedCount < amountPerType && attempts < 100)
+        GameObject container = new GameObject("--- Spawned Objects Container ---");
+        spawnContainer = container.transform;
+    }
+
+    void SpawnPlayer()
+    {
+        if (playerPrefab == null) return;
+
+        for (int i = 0; i < 100; i++)
+        {
+            if (GetValidNavMeshPosition(out Vector3 validPos))
             {
-                attempts++;
+                GameObject p = Instantiate(playerPrefab, validPos, Quaternion.identity);
+                p.transform.parent = spawnContainer;
+                currentPlayerTransform = p.transform;
+                Debug.Log("Player Spawned at: " + validPos);
+                return;
+            }
+        }
+        Debug.LogError("Could not find a valid spawn point for Player!");
+    }
 
-                // A. Pick a random spot
-                float randX = UnityEngine.Random.Range(0, terrainGenerator.Width);
-                float randZ = UnityEngine.Random.Range(0, terrainGenerator.Depth);
+    
+    void SpawnGroup(GameObject[] prefabs, int count, string groupName, float heightOffset)
+    {
+        if (prefabs == null || prefabs.Length == 0) return;
 
-                // B. Get Height
-                float height = terrainGenerator.GetTerrainHeight((int)randX, (int)randZ);
+        int spawnedCount = 0;
+        int attempts = 0;
 
-                // --- NEW LOGIC: Filter out Water and Mountains ---
-                // If it is too low (Water) OR too high (Mountain Peak), skip it
-                if (height < minSpawnHeight || height > maxSpawnHeight)
+        while (spawnedCount < count && attempts < 200)
+        {
+            attempts++;
+            GameObject prefabToSpawn = prefabs[Random.Range(0, prefabs.Length)];
+
+            if (GetValidNavMeshPosition(out Vector3 validPos))
+            {
+                if (IsReachable(validPos))
                 {
-                    continue;
-                }
+                    GameObject obj = Instantiate(prefabToSpawn, validPos, Quaternion.identity);
 
-                Vector3 candidatePos = new Vector3(randX, height, randZ);
+                    
+                    obj.transform.position += Vector3.up * heightOffset;
 
-                if (IsReachable(candidatePos))
-                {
-                    Instantiate(prefab, candidatePos, Quaternion.identity);
+                    obj.transform.parent = spawnContainer;
                     spawnedCount++;
                 }
             }
         }
+        Debug.Log($"Spawned {spawnedCount} / {count} {groupName}s.");
+    }
+
+    bool GetValidNavMeshPosition(out Vector3 finalPosition)
+    {
+        finalPosition = Vector3.zero;
+
+        float randX = UnityEngine.Random.Range(0, terrainGenerator.Width);
+        float randZ = UnityEngine.Random.Range(0, terrainGenerator.Depth);
+        float rawHeight = terrainGenerator.GetTerrainHeight((int)randX, (int)randZ);
+
+        if (rawHeight < minSpawnHeight || rawHeight > maxSpawnHeight) return false;
+
+        Vector3 candidate = new Vector3(randX, rawHeight, randZ);
+
+        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 5.0f, NavMesh.AllAreas))
+        {
+            float slope = Vector3.Angle(hit.normal, Vector3.up);
+            if (slope > maxSlopeAngle) return false;
+
+            finalPosition = hit.position;
+            return true;
+        }
+
+        return false;
     }
 
     bool IsReachable(Vector3 targetPos)
     {
-        if (playerTransform == null) return true;
+        if (currentPlayerTransform == null) return false;
 
         NavMeshPath path = new NavMeshPath();
+        NavMesh.CalculatePath(currentPlayerTransform.position, targetPos, NavMesh.AllAreas, path);
 
-        // Increased search radius to 10f to handle uneven terrain better
-        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10.0f, NavMesh.AllAreas))
+        if (path.status == NavMeshPathStatus.PathComplete)
         {
-            NavMesh.CalculatePath(playerTransform.position, hit.position, NavMesh.AllAreas, path);
-
-            if (path.status == NavMeshPathStatus.PathComplete)
-            {
-                if (showPathLines) DrawDebugPath(path);
-                return true;
-            }
+            if (showPathLines) DrawDebugPath(path);
+            return true;
         }
         return false;
     }
 
     void DrawDebugPath(NavMeshPath path)
     {
-        // 1. Scene View Debug Lines (For Developer)
         for (int i = 0; i < path.corners.Length - 1; i++)
         {
-            UnityEngine.Debug.DrawLine(path.corners[i], path.corners[i + 1], Color.cyan, 10f);
+            Debug.DrawLine(path.corners[i], path.corners[i + 1], Color.cyan, 10f);
         }
 
-        // 2. Game View Visualization (For Coursework)
         if (lineRendererPrefab != null)
         {
-            // Create the line object
             LineRenderer line = Instantiate(lineRendererPrefab);
-
-            // Set the number of points
             line.positionCount = path.corners.Length;
-
-            // --- THE FIX: Lift the line slightly above the ground ---
             Vector3[] liftedCorners = new Vector3[path.corners.Length];
             for (int i = 0; i < path.corners.Length; i++)
             {
-                // Add 0.5f to the Y axis so it floats above grass/water
                 liftedCorners[i] = path.corners[i] + Vector3.up * 0.5f;
             }
-
-            // Assign the lifted points to the line
             line.SetPositions(liftedCorners);
-
-            // Cleanup: Destroy the line after 10 seconds
             Destroy(line.gameObject, 10f);
         }
     }
